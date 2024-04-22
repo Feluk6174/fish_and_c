@@ -114,6 +114,7 @@ fn operation(tokens:&Vec<Token>, idx:usize, mut parent: Branch) -> Result<(Branc
     if tokens[idx].token_type == TTS::NewCommand {
         return Err(String::from("Empty declaration"))
     }
+    println!("op: {:?}:{}", parent.token.token_type, parent.token.text);
     while !(tokens[idx+depth].token_type == TTS::NewCommand) {
         let mut temp = Branch::new(tokens[idx+depth].clone());
         if tokens[idx+depth].token_type == TTS::Pointer {
@@ -175,6 +176,75 @@ fn return_tree(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize), Strin
     return Ok((parent, depth)) 
 }
 
+fn if_tree(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize), String> {
+    let mut depth:usize = 0;
+    let mut parent = Branch::new(tokens[idx].clone());
+    depth += 1;
+
+    match operation(tokens, idx+depth, parent) {
+        Ok(branch) => {
+            parent = branch.0;
+            depth += branch.1+1;
+        }
+        Err(err) => return Err(err)
+    };
+
+    if !(tokens[idx+depth].token_type == TTS::Keys && tokens[idx+depth].text == "{") {
+        println!("{:?}-!-{}", tokens[idx+depth].token_type, tokens[idx+depth].text);
+        return Err(String::from("Expected { after if statement."))
+    }
+
+    match code_block(tokens, idx + depth) {
+        Ok(branch) => {
+            parent.branches.push(branch.0);
+            depth += branch.1;
+        },
+        Err(err) => return Err(err)
+    };
+
+    if tokens[idx + depth + 1].token_type == TTS::ElseKeyword {
+        depth += 1;
+        match else_tree(tokens, idx+depth) {
+            Ok(branch) => {
+                parent.branches.push(branch.0);
+                depth += branch.1;
+            }
+            Err(err) => return Err(err)
+        }
+    }
+
+    Ok((parent, depth))
+}
+
+fn else_tree(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize), String>  {
+    let mut parent = Branch::new(tokens[idx].clone());
+    let mut depth:usize = 1;
+
+    if tokens[idx+depth].token_type == TTS::IfKeyword {
+        match if_tree(tokens, idx+depth) {
+            Ok(branch) => {
+                parent.branches.push(branch.0);
+                depth += branch.1;
+            }
+            Err(err) => return Err(err)
+        };
+    }
+    else if tokens[idx+depth].token_type == TTS::Keys && tokens[idx+depth].text == "{" {
+        match code_block(tokens, idx+depth) {
+            Ok(branch) => {
+                parent.branches.push(branch.0);
+                depth += branch.1;
+            },
+            Err(err) => return Err(err)
+        }
+    }
+    else {
+        return Err(String::from("Expected { or if after an else"))
+    }
+
+    Ok((parent, depth))
+}
+
 fn code_block(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize), String> {
     let mut branch: Branch = Branch::new(tokens[idx].clone());
     let mut depth:usize = 0;
@@ -195,7 +265,13 @@ fn code_block(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize), String
                 }
             }
             TTS::Name => (),
-            TTS::IfKeyword => (),
+            TTS::IfKeyword => match if_tree(tokens, idx+depth) {
+                Ok(operations) => {
+                    branch.branches.push(operations.0);
+                    depth += operations.1;
+                }
+                Err(err) => return Err(err)
+            },
             TTS::WhileKeyword => (),
             TTS::ContinueKeyword => (),
             TTS::BreakKeyword => (),

@@ -30,6 +30,7 @@ fn add_token(tokens: &mut Vec<Token>, mut token: String, definitions:&Vec<(Strin
         "u8" | "u16" | "u32" | "u64" | "f8" | "f16" | "f32" | "f64" => Token::var_type(&token),
         "fn" => Token::function(&token),
         "if" => Token::if_keyword(&token),
+        "else" => Token::else_keyword(&token),
         "while" => Token::while_keyword(&token),
         "for" => Token::for_keyword(&token),
         "return" => Token::return_keyword(&token),

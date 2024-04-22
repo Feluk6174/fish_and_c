@@ -1,13 +1,12 @@
-#HEADER
-    import test2.fac
-    define FIVE 5
-#HEADER
-
 fn $u8 main(u8 char u8 lol) {
     $u8 temp = char + 5 - $char;
     u8 hello = $temp;
-    if temp == 19 {
-        return FIVE
+    if temp == 19; {
+        return FIVE;
+    } else if temp == 18; {
+        return 8;
+    } else {
+        return 6;
     }
 }
 

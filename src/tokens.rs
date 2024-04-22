@@ -12,6 +12,7 @@ pub enum TTS {
     Comparison,
     ArithmeticOperation,
     IfKeyword,
+    ElseKeyword,
     WhileKeyword,
     ForKeyword,
     ReturnKeyword,
@@ -98,6 +99,12 @@ impl Token {
     pub fn if_keyword(text: &str) -> Self {
         Self {
             token_type: TTS::IfKeyword,
+            text: String::from(text),
+        }
+    }
+    pub fn else_keyword(text: &str) -> Self {
+        Self {
+            token_type: TTS::ElseKeyword,
             text: String::from(text),
         }
     }
