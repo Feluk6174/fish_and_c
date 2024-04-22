@@ -1,0 +1,13 @@
+#HEADER
+    import test2.yeso
+    define FIVE 5
+#HEADER
+
+fn $u8 main(u8 char u8 lol) {
+    $u8 temp = char + 5 - $char;
+    u8 hello = $temp;
+    if temp == 19 {
+        return FIVE
+    }
+}
+
