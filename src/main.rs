@@ -3,7 +3,7 @@ mod lexer;
 mod tokens;
 mod syntax_tree;
 fn main() {
-    let res = lexer::read_file("test.yeso");
+    let res = lexer::read_file("test.fac");
     let (code, definitions) = preprossesor::preprosess(res.clone()).unwrap();
     let tks = lexer::tokenizer(code, definitions);
     println!("{:?}", tks);

@@ -1,5 +1,5 @@
 #HEADER
-    import test2.yeso
+    import test2.fac
     define FIVE 5
 #HEADER
 
