@@ -1,7 +1,6 @@
-mod preprossesor;
-mod lexer;
-mod tokens;
-mod syntax_tree;
+mod precompile;
+mod compiler;
+use precompile::{lexer, syntax_tree, preprossesor};
 fn main() {
     let res = lexer::read_file("test.fac");
     let (code, definitions) = preprossesor::preprosess(res.clone()).unwrap();

@@ -1,4 +1,4 @@
-use crate::tokens::Token;
+use crate::precompile::tokens::Token;
 use std::fs;
 use std::str;
 

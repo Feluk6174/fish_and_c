@@ -1,19 +1,5 @@
-use crate::tokens::{Token, TTS};
-
-#[derive(Debug, Clone)]
-pub struct Branch {
-    pub token: Token,
-    pub branches: Vec<Branch>,
-}
-
-impl Branch {
-    pub fn new(token: Token) -> Self {
-        Self {
-            token: token,
-            branches: Vec::new(),
-        }
-    }
-}
+use crate::precompile::tokens::{Token, TTS};
+use crate::precompile::branch::Branch;
 
 fn get_type_branch(
     tokens: &Vec<Token>,
