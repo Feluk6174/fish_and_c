@@ -8,5 +8,9 @@ fn $u8 main(u8 char u8 lol) {
     } else {
         return 6;
     }
+
+    while hello <= 10; {
+        u8 hello = 10;
+    }
 }
 
