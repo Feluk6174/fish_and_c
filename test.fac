@@ -1,3 +1,8 @@
+#HEADER
+    define FIVE 5
+    import test2.fac
+#HEADER
+
 fn $u8 main(u8 char u8 lol) {
     $u8 temp = char + 5 - $char;
     u8 hello = $temp;
@@ -10,7 +15,7 @@ fn $u8 main(u8 char u8 lol) {
     }
 
     while hello <= 10; {
-        u8 hello = 10;
+        break;
     }
 }
 

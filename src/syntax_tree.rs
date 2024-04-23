@@ -275,6 +275,13 @@ fn while_tree(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize), String
     Ok((parent, depth))
 }
 
+fn signle_token(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize), String> {
+    if tokens[idx+1].token_type != TTS::NewCommand {
+        return Err(format!("expected ; after {}", tokens[idx].text));
+    }
+    Ok((Branch::new(tokens[idx].clone()), 1))
+}
+
 fn code_block(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize), String> {
     let mut branch: Branch = Branch::new(tokens[idx].clone());
     let mut depth: usize = 0;
@@ -308,8 +315,13 @@ fn code_block(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize), String
                 }
                 Err(err) => return Err(err)
             },
-            TTS::ContinueKeyword => (),
-            TTS::BreakKeyword => (),
+            TTS::ContinueKeyword | TTS::BreakKeyword => match signle_token(tokens, idx+depth) {
+                Ok(operations) => {
+                    branch.branches.push(operations.0);
+                    depth += operations.1;
+                }
+                Err(err) => return Err(err)
+            },
             TTS::ReturnKeyword => match return_tree(tokens, idx + depth) {
                 Ok(operations) => {
                     branch.branches.push(operations.0);
