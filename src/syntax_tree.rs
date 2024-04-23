@@ -123,8 +123,16 @@ fn operation(
         if tokens[idx + depth].token_type == TTS::Pointer {
             depth += 1;
             temp.branches.push(Branch::new(tokens[idx + depth].clone()));
+            parent.branches.push(temp);
         }
-        parent.branches.push(temp);
+        else if tokens[idx + depth].token_type == TTS::Name && tokens[idx + depth + 1].token_type == TTS::Parenthesis && tokens[idx + depth + 1].text == "(" {
+            let branch = func_call_tree(tokens, idx+depth)?;
+            parent.branches.push(branch.0);
+            depth += branch.1;
+        }
+        else {
+            parent.branches.push(temp);
+        }
         depth += 1;
     }
     Ok((parent, depth))
@@ -283,7 +291,6 @@ fn signle_token(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize), Stri
 }
 
 fn name_tree(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize), String> {
-    let mut depth:usize = 1;
     if tokens[idx + 1].token_type == TTS::Assignation {
         assignation_tree(tokens, idx)
     }
@@ -301,7 +308,7 @@ fn assignation_tree(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize), 
     match operation(tokens, idx+depth, parent) {
         Ok(branch) => {
             parent = branch.0;
-            depth += branch.1;
+            depth += branch.1-1;
         }
         Err(err) => return Err(err)
     }
@@ -310,16 +317,19 @@ fn assignation_tree(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize), 
 
 fn func_call_tree(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize), String> {
     let mut parent = Branch::new(tokens[idx].clone());
-    let mut parenth = Branch::new(tokens[idx+1].clone());
     let mut depth:usize = 2;
-    match operation(tokens, idx+depth, parenth) {
-        Ok(branch) => {
-            parenth = branch.0;
-            depth += branch.1+1;
+
+    while !(tokens[idx+depth].token_type == TTS::Parenthesis && tokens[idx+depth].text == ")"){
+        let mut parenth = Branch::new(tokens[idx+1].clone());
+        match operation(tokens, idx+depth, parenth) {
+            Ok(branch) => {
+                parenth = branch.0;
+                depth += branch.1+1;
+            }
+            Err(err) => return Err(err)
         }
-        Err(err) => return Err(err)
+        parent.branches.push(parenth);
     }
-    parent.branches.push(parenth);
     
     Ok((parent, depth))
 }
@@ -345,7 +355,7 @@ fn code_block(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize), String
             TTS::Name => match name_tree(tokens, idx + depth) {
                 Ok(operations) => {
                     branch.branches.push(operations.0);
-                    depth += operations.1;
+                    depth += operations.1 + 1;
                 }
                 Err(err) => return Err(err),
             },
