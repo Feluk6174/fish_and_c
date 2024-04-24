@@ -39,6 +39,23 @@ impl Function {
             vars: vars
         })
     }
+
+    pub fn process(mut self) -> Result<(), String>{
+        for branch in &mut self.code.branches[0].branches {
+            match branch.token.token_type {
+                TTS::Pointer | TTS::VarType => {}
+                TTS::Name => {}
+                TTS::IfKeyword => {}
+                TTS::WhileKeyword => {}
+                TTS::ReturnKeyword => {}
+                TTS::BreakKeyword => {}
+                TTS::ContinueKeyword => {}
+                TTS::Assembly => {}
+                _ => return Err(format!("Invalid token {}", branch.token.text))
+            } 
+        }
+        Ok(())
+    }
 }
 
 

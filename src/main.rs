@@ -1,10 +1,10 @@
 mod precompile;
 mod compiler;
-use precompile::{lexer, syntax_tree, preprossesor};
+use precompile::{lexer, syntax_tree, preprocessor};
 use compiler::compile;
 fn main() {
     let res = lexer::read_file("test.fnc");
-    let (code, definitions) = preprossesor::preprosess(res.clone()).unwrap();
+    let (code, definitions) = preprocessor::preprocess(res.clone()).unwrap();
     let tks = lexer::tokenizer(code, definitions).unwrap();
     println!("{:?}", tks);
     let tree = match syntax_tree::build_tree(tks) {
