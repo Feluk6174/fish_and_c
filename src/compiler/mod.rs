@@ -1,3 +1,3 @@
-pub mod compiler;
+pub mod compile;
 mod util;
 mod functions;

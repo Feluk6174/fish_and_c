@@ -1,4 +1,4 @@
-# fish_and_c
+# Fish&C
 The compiler for the Fish&amp;C language
 
 ## Building
