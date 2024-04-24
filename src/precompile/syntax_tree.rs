@@ -320,6 +320,22 @@ fn func_call_tree(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize), St
     Ok((parent, depth))
 }
 
+fn assembly_tree(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize), String> {
+    let mut parent = Branch::new(tokens[idx].clone());
+    if tokens[idx+1].token_type != TTS::Keys || tokens[idx+1].text != "{" {
+        return Err(String::from("Expected { after asm"));
+    }
+    if tokens[idx+3].token_type != TTS::Keys || tokens[idx+3].text != "}" {
+        return Err(String::from("Expected } after asm"));
+    }
+    if tokens[idx+2].token_type != TTS::AssemblyCode {
+        return Err(String::from("Expected assembly code after asm"));
+    }
+    parent.branches.push(Branch::new(tokens[idx+2].clone()));
+    Ok((parent, 4))
+
+}
+
 fn code_block(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize), String> {
     let mut branch: Branch = Branch::new(tokens[idx].clone());
     let mut depth: usize = 0;
@@ -373,6 +389,13 @@ fn code_block(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize), String
                 }
                 Err(err) => return Err(err),
             },
+            TTS::Assembly => match assembly_tree(tokens, idx+depth) {
+                Ok(operations) => {
+                    branch.branches.push(operations.0);
+                    depth += operations.1;
+                }
+                Err(err) => return Err(err),
+            }
             _ => return Err(format!("{:?} Not implmented", tokens[idx+depth].text)),
         }
         depth += 1;

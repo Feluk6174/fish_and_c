@@ -21,6 +21,8 @@ pub enum TTS {
     Address,
     Pointer,
     DeclarationArgs,
+    Assembly,
+    AssemblyCode,
 }
 
 #[derive(Debug, Clone)]
@@ -154,6 +156,17 @@ impl Token {
         Self {
             token_type: TTS::DeclarationArgs,
             text: String::new(),
+        }
+    }
+    pub fn assembly() -> Self {
+        Self {
+            token_type: TTS::Assembly,
+            text: String::new(),
+        }
+    }pub fn assembly_code(text: &str) -> Self {
+        Self {
+            token_type: TTS::AssemblyCode,
+            text: String::from(text),
         }
     }
 }

@@ -5,7 +5,7 @@ use compiler::compile;
 fn main() {
     let res = lexer::read_file("test.fnc");
     let (code, definitions) = preprossesor::preprosess(res.clone()).unwrap();
-    let tks = lexer::tokenizer(code, definitions);
+    let tks = lexer::tokenizer(code, definitions).unwrap();
     println!("{:?}", tks);
     let tree = match syntax_tree::build_tree(tks) {
         Ok(coses) => coses,
@@ -16,5 +16,5 @@ fn main() {
     };
     syntax_tree::print_tree(&tree, 0);
 
-    compile::compile(tree, "out.asm").unwrap();
+    //compile::compile(tree, "out.asm").unwrap();
 }
