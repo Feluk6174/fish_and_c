@@ -1,6 +1,7 @@
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TTS {
-    Literal,
+    NumberLiteral,
+    StringLiteral,
     VarType,
     Name,
     Function,
@@ -32,9 +33,15 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn literal(text: &str) -> Self {
+    pub fn number_literal(text: &str) -> Self {
         Self {
-            token_type: TTS::Literal,
+            token_type: TTS::NumberLiteral,
+            text: String::from(text),
+        }
+    }
+    pub fn string_literal(text: &str) -> Self {
+        Self {
+            token_type: TTS::StringLiteral,
             text: String::from(text),
         }
     }

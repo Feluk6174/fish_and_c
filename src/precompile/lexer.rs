@@ -24,7 +24,7 @@ fn add_token(tokens: &mut Vec<Token>, mut token: String, definitions:&Vec<(Strin
         || token.as_bytes()[0] == b'\"' && token.as_bytes()[token.as_bytes().len() - 1] == b'\"'
         || token.as_bytes()[0] == b'\'' && token.as_bytes()[token.as_bytes().len() - 1] == b'\''
     {
-        tokens.push(Token::literal(&token));
+        tokens.push(Token::number_literal(&token));
         return;
     }
 
@@ -61,6 +61,7 @@ pub fn tokenizer(code: String, definitions:Vec<(String, String)>) -> Result<Vec<
         (last_ch, text) = match m {
             "code" => code_mode(&mut tokens, ch, ch_u8, last_ch, text, &definitions),
             "asm" => (ch, asm_mode(&mut tokens, ch_u8, ch, text)),
+            "str" => str_mode(&mut tokens, ch_u8, ch, text, last_ch),
             _ => return Err(format!("Not recognised mode {}", m))
         };
     }
@@ -125,6 +126,14 @@ fn code_mode(tokens: &mut Vec<Token>, ch:char, ch_u8:&u8, mut last_ch:char, mut 
             add_token(tokens, String::from_utf8(text).unwrap(), &definitions);
             text = Vec::new()
         }
+        '\"' | '\'' => {
+            add_token(tokens, String::from_utf8(text).unwrap(), &definitions);
+            text = Vec::new();
+            last_ch = ch;
+            unsafe {
+                MODE = "str"
+            }
+        }
         _ => text.push(*ch_u8),
     };
     (last_ch, text)
@@ -144,4 +153,19 @@ fn asm_mode(tokens: &mut Vec<Token>, ch_u8:&u8, ch:char, mut text:Vec<u8>) -> Ve
         _ => text.push(*ch_u8)
     };
     text
+}
+
+fn str_mode(tokens: &mut Vec<Token>, ch_u8:&u8, ch:char, mut text: Vec<u8>, mut last_ch: char) -> (char, Vec<u8>) {
+    match ch {
+        '"' => {
+            unsafe {
+                MODE = "code";    
+            }
+            last_ch = ' ';
+            tokens.push(Token::string_literal(&String::from_utf8(text).unwrap()));
+            text = Vec::new();
+        },
+        _ => text.push(*ch_u8)
+    };
+    (last_ch, text)
 }
