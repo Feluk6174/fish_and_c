@@ -16,5 +16,5 @@ fn main() {
     };
     syntax_tree::print_tree(&tree, 0);
 
-    //compile::compile(tree, "out.asm").unwrap();
+    compile::compile(tree, "out.asm").unwrap();
 }

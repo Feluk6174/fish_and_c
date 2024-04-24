@@ -45,7 +45,7 @@ impl Function {
 pub fn build_functions(tree: &Vec<Branch>) -> Result<Vec<Function>, String> {
     let mut functions: Vec<Function> = Vec::new();
     for i in 0..tree.len() / 2 {
-        functions.push(Function::new(tree, i)?);
+        functions.push(Function::new(tree, i*2)?);
     }
     Ok(functions)
 }
