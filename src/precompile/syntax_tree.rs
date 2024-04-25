@@ -1,6 +1,8 @@
 use crate::precompile::tokens::{Token, TTS};
 use crate::precompile::branch::Branch;
 
+use super::branch;
+
 fn get_type_branch(
     tokens: &Vec<Token>,
     idx: usize,
@@ -106,7 +108,67 @@ fn operation(
     }
     while !(tokens[idx + depth].token_type == TTS::NewCommand) {
         let mut temp = Branch::new(tokens[idx + depth].clone());
-        if tokens[idx + depth].token_type == TTS::Pointer {
+        if tokens[idx + depth].token_type == TTS::Pointer && tokens[idx + depth + 1].token_type == TTS::Parenthesis && tokens[idx + depth + 1].text == "("{
+            depth += 1;
+            match parenthesis_operation(tokens, idx+depth, Branch::new(tokens[idx+depth].clone()))? {
+                branch => {
+                    temp.branches.push(branch.0);
+                    depth += branch.1;
+                }
+            }
+            parent.branches.push(temp);
+        }
+        else if tokens[idx + depth].token_type == TTS::Pointer {
+            depth += 1;
+            temp.branches.push(Branch::new(tokens[idx + depth].clone()));
+            parent.branches.push(temp);
+        }
+        else if tokens[idx + depth].token_type == TTS::Address {
+            depth += 1;
+            temp.branches.push(Branch::new(tokens[idx + depth].clone()));
+            parent.branches.push(temp);
+        }
+        else if tokens[idx + depth].token_type == TTS::Name && tokens[idx + depth + 1].token_type == TTS::Parenthesis && tokens[idx + depth + 1].text == "(" {
+            let branch = func_call_tree(tokens, idx+depth)?;
+            parent.branches.push(branch.0);
+            depth += branch.1;
+        }
+        else {
+            parent.branches.push(temp);
+        }
+        depth += 1;
+    }
+    Ok((parent, depth))
+}
+
+fn parenthesis_operation(
+    tokens: &Vec<Token>,
+    idx: usize,
+    mut parent: Branch,
+) -> Result<(Branch, usize), String> {
+    let mut depth: usize = 0;
+    if tokens[idx].token_type == TTS::Parenthesis && tokens[idx].text == ")" {
+        return Err(String::from("Empty paretethis"));
+    }
+    depth += 1;
+    while !(tokens[idx + depth].token_type == TTS::Parenthesis && tokens[idx+depth].text == ")") {
+        let mut temp = Branch::new(tokens[idx + depth].clone());
+        if tokens[idx + depth].token_type == TTS::Pointer && tokens[idx + depth + 1].token_type == TTS::Parenthesis && tokens[idx + depth + 1].text == "("{
+            depth += 1;
+            match parenthesis_operation(tokens, idx+depth, Branch::new(tokens[idx+depth].clone()))? {
+                branch => {
+                    temp.branches.push(branch.0);
+                    depth += branch.1;
+                }
+            }
+            parent.branches.push(temp);
+        }
+        else if tokens[idx + depth].token_type == TTS::Pointer {
+            depth += 1;
+            temp.branches.push(Branch::new(tokens[idx + depth].clone()));
+            parent.branches.push(temp);
+        }
+        else if tokens[idx + depth].token_type == TTS::Address {
             depth += 1;
             temp.branches.push(Branch::new(tokens[idx + depth].clone()));
             parent.branches.push(temp);
