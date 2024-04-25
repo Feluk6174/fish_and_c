@@ -1,6 +1,8 @@
 use std::collections::HashMap;
+use std::fs::File;
 use crate::precompile::tokens::TTS;
 use crate::precompile::branch::{Branch, get_name_from_arg};
+use super::assembly::gen_asm_asm;
 
 #[derive(Debug)]
 pub struct Function {
@@ -40,7 +42,7 @@ impl Function {
         })
     }
 
-    pub fn process(mut self) -> Result<(), String>{
+    pub fn process(mut self, mut file:File) -> Result<(), String>{
         for branch in &mut self.code.branches[0].branches {
             match branch.token.token_type {
                 TTS::Pointer | TTS::VarType => {}
@@ -50,9 +52,9 @@ impl Function {
                 TTS::ReturnKeyword => {}
                 TTS::BreakKeyword => {}
                 TTS::ContinueKeyword => {}
-                TTS::Assembly => {}
+                TTS::Assembly => gen_asm_asm(branch, &mut file)?,
                 _ => return Err(format!("Invalid token {}", branch.token.text))
-            } 
+            };
         }
         Ok(())
     }
