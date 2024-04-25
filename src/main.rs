@@ -16,5 +16,8 @@ fn main() {
     };
     syntax_tree::print_tree(&tree, 0);
 
-    compile::compile(tree, "out.asm").unwrap();
+    match compile::compile(tree, "out.asm") {
+        Ok(_) => println!("No error"),
+        Err(err) => println!("{}", err)
+    };
 }
