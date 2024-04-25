@@ -133,6 +133,15 @@ fn operation(
             parent.branches.push(branch.0);
             depth += branch.1;
         }
+        else if tokens[idx+depth].token_type == TTS::Parenthesis && tokens[idx+depth].text == "(" {
+            match parenthesis_operation(tokens, idx+depth, Branch::new(tokens[idx+depth].clone()))? {
+                branch => {
+                    temp.branches.push(branch.0);
+                    depth += branch.1;
+                }
+            }
+            parent.branches.push(temp);
+        }
         else {
             parent.branches.push(temp);
         }
@@ -177,6 +186,15 @@ fn parenthesis_operation(
             let branch = func_call_tree(tokens, idx+depth)?;
             parent.branches.push(branch.0);
             depth += branch.1;
+        }
+        else if tokens[idx+depth].token_type == TTS::Parenthesis && tokens[idx+depth].text == "(" {
+            match parenthesis_operation(tokens, idx+depth, Branch::new(tokens[idx+depth].clone()))? {
+                branch => {
+                    temp.branches.push(branch.0);
+                    depth += branch.1;
+                }
+            }
+            parent.branches.push(temp);
         }
         else {
             parent.branches.push(temp);
