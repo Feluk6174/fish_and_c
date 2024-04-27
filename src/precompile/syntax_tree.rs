@@ -1,7 +1,5 @@
-use crate::precompile::tokens::{Token, TTS};
-use crate::precompile::branch::Branch;
-
-use super::branch;
+use super::tokens::{Token, TTS};
+use super::branch::Branch;
 
 fn get_type_branch(
     tokens: &Vec<Token>,
@@ -79,7 +77,7 @@ fn declare_arguments(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize),
     let mut depth: usize = 0;
     let mut last: Branch;
     while !(tokens[idx + depth].token_type == TTS::Parenthesis && tokens[idx + depth].text == ")") {
-        match get_type_branch(tokens, idx, 0) {
+        match get_type_branch(tokens, idx+depth, 0) {
             Ok(branch) => {
                 last = branch.0;
                 depth += branch.1 + 1;
