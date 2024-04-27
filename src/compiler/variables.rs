@@ -132,6 +132,15 @@ impl Variable {
         })
         
     }
+    pub fn new_from_arg(name: String, branch: &Branch) -> Result<Self, String>{
+        let t = Type::new(branch)?;
+        Ok(Self {
+            name: name,
+            var_type: t,
+            size: t.size()?,
+            pure_size: t.pure_size()?,
+        })  
+    }
     pub fn new_simple(name: &str, var_type: &str) -> Result<Self, String> {
         let t = Type::Simple(SimpleType::new(var_type)?);
         Ok(Self {
@@ -143,9 +152,10 @@ impl Variable {
     }
 }
 
+#[derive(Debug, Default, Clone)]
 pub struct Variables {
     vars: Vec<Variable>,
-    rel_pos: u64
+    pub rel_pos: u64
 }
 
 impl Variables {
@@ -159,9 +169,19 @@ impl Variables {
         self.rel_pos += var.pure_size;
         self.vars.push(var);
     }
+    pub fn push_arg(&mut self, name: String, t: &Branch) -> Result<(), String> {
+        let var = Variable::new_from_arg(name, t)?;
+        self.rel_pos += var.pure_size;
+        self.vars.push(var);
+        Ok(())
+    }
+
+    pub fn names(&self) -> Vec<&String> {
+        let mut vars = Vec::new();
+        for var in &self.vars {
+            vars.push(&var.name)
+        }
+        vars
+    }
 }
 
-pub fn add_var(mut vars: Vec<Variable>, branch: &Branch) -> Result<Vec<Variable>, String> {
-    vars.push(Variable::new(branch)?);
-    Ok(vars)
-}

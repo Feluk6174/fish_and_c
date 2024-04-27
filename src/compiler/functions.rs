@@ -1,4 +1,5 @@
 use super::assembly::gen_asm_asm;
+use super::variables::{Variable, Variables, Type};
 use crate::precompile::branch::{get_name_from_arg, Branch};
 use crate::precompile::tokens::TTS;
 use std::collections::HashMap;
@@ -8,10 +9,10 @@ use std::io::Write;
 #[derive(Debug)]
 pub struct Function {
     pub name: String,
-    pub return_type: Branch,
+    pub return_type: Type,
     pub code: Branch,
-    pub args: Vec<Branch>,
-    pub vars: HashMap<String, Branch>,
+    pub args: Vec<Type>,
+    pub vars: Variables,
 }
 
 impl Function {
@@ -25,20 +26,18 @@ impl Function {
         }
 
         let mut args = Vec::new();
-        let mut vars = HashMap::new();
+        let mut vars = Variables::new();
         for i in 0..tree[idx].branches[2].branches.len() {
-            args.push(tree[idx].branches[2].branches[i].clone());
-            vars.insert(
-                get_name_from_arg(&tree[idx].branches[2].branches[i])?,
-                (tree[idx].branches[2].branches[i].clone()),
-            );
+            println!("{} {:?}", i, tree[idx].branches[2].branches[i].token.text);
+            args.push(Type::new(&tree[idx].branches[2].branches[i])?);
+            vars.push_arg(get_name_from_arg(&tree[idx].branches[2].branches[i])?, &tree[idx].branches[2].branches[i])?;
         }
 
-        println!("{:?}", vars.keys());
+        println!("{:?} {}", vars.names(), vars.rel_pos);
 
         Ok(Self {
             name: tree[idx].branches[1].token.text.clone(),
-            return_type: tree[idx].branches[0].clone(),
+            return_type: Type::new(&tree[idx].branches[0])?,
             code: tree[idx + 1].clone(),
             args: args,
             vars: vars,
