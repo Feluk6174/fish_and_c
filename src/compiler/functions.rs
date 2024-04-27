@@ -71,13 +71,8 @@ impl Function {
 }
 
 pub fn process_functions(mut functions: Vec<Function>, file: &mut File) -> Result<(), String> {
-    println!("{}", functions[1].name);
     for i in 0..functions.len() {
-        println!("{} {}", i, functions[i].name);
-        match functions[i].process(file) {
-            Ok(_) => (),
-            Err(err) => println!("Err {}", err),
-        };
+        functions[i].process(file)?;
         println!("{}", functions.len())
     }
     Ok(())
@@ -90,3 +85,5 @@ pub fn build_functions(tree: &Vec<Branch>) -> Result<Vec<Function>, String> {
     }
     Ok(functions)
 }
+
+pub fn call() {}
