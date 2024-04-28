@@ -4,3 +4,4 @@ out.asm
 *.fnc
 *.c
 *.s
+a.out

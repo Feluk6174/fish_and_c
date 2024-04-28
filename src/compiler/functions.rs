@@ -1,10 +1,28 @@
 use super::assembly::gen_asm_asm;
-use super::variables::{Variable, Variables, Type};
+use super::variables::{Variables, Type};
+use crate::compiler::variables::gen_declare_asm;
 use crate::precompile::branch::{get_name_from_arg, Branch};
 use crate::precompile::tokens::TTS;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
+
+#[derive(Debug)]
+pub struct Signature {
+    pub name: String,
+    pub return_type: Type,
+    pub args: Vec<Type>
+}
+
+impl Signature {
+    pub fn new(function: &Function) -> Self {
+        Self {
+            name: function.name.clone(),
+            return_type: function.return_type,
+            args: function.args.clone()
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct Function {
@@ -28,7 +46,6 @@ impl Function {
         let mut args = Vec::new();
         let mut vars = Variables::new();
         for i in 0..tree[idx].branches[2].branches.len() {
-            println!("{} {:?}", i, tree[idx].branches[2].branches[i].token.text);
             args.push(Type::new(&tree[idx].branches[2].branches[i])?);
             vars.push_arg(get_name_from_arg(&tree[idx].branches[2].branches[i])?, &tree[idx].branches[2].branches[i])?;
         }
@@ -44,19 +61,19 @@ impl Function {
         })
     }
 
-    pub fn process(&mut self, file: &mut File) -> Result<(), String> {
+    pub fn process(&mut self, file: &mut File, mut signatures: &Vec<Signature>) -> Result<(), String> {
         self.add_start(file);
-        for branch in &mut self.code.branches {
-            println!("{:?}", branch.token);
+        for branch in &self.code.branches {
+            // println!("{:?}", branch.token);
             match branch.token.token_type {
-                TTS::Pointer | TTS::VarType => {}
+                TTS::Pointer | TTS::VarType => gen_declare_asm(&mut self.vars, signatures, branch)?,
                 TTS::Name => {}
                 TTS::IfKeyword => {}
                 TTS::WhileKeyword => {}
                 TTS::ReturnKeyword => {}
                 TTS::BreakKeyword => {}
                 TTS::ContinueKeyword => {}
-                TTS::Assembly => gen_asm_asm(branch, file)?,
+                TTS::Assembly => gen_asm_asm(&branch, file)?,
                 _ => return Err(format!("Invalid token {}", branch.token.text)),
             };
         }
@@ -69,20 +86,21 @@ impl Function {
     }
 }
 
-pub fn process_functions(mut functions: Vec<Function>, file: &mut File) -> Result<(), String> {
+pub fn process_functions(mut functions: Vec<Function>, signatures: Vec<Signature>, file: &mut File) -> Result<(), String> {
     for i in 0..functions.len() {
-        functions[i].process(file)?;
-        println!("{}", functions.len())
+        functions[i].process(file, &signatures)?;
     }
     Ok(())
 }
 
-pub fn build_functions(tree: &Vec<Branch>) -> Result<Vec<Function>, String> {
+pub fn build_functions(tree: &Vec<Branch>) -> Result<(Vec<Function>, Vec<Signature>), String> {
     let mut functions: Vec<Function> = Vec::new();
+    let mut signatures:Vec<Signature> = Vec::new();
     for i in 0..tree.len() / 2 {
         functions.push(Function::new(tree, i * 2)?);
+        signatures.push(Signature::new(&functions[i]));
     }
-    Ok(functions)
+    Ok((functions, signatures))
 }
 
 pub fn call() {}
