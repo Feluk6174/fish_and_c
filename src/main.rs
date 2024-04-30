@@ -1,5 +1,6 @@
 mod precompile;
 mod compiler;
+mod types;
 use precompile::{lexer, syntax_tree, preprocessor};
 use compiler::compile;
 fn main() {

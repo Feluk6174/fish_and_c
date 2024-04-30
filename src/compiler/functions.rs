@@ -66,7 +66,7 @@ impl Function {
         for branch in &self.code.branches {
             // println!("{:?}", branch.token);
             match branch.token.token_type {
-                TTS::Pointer | TTS::VarType => gen_declare_asm(&mut self.vars, signatures, branch)?,
+                TTS::Pointer | TTS::VarType => gen_declare_asm(&mut self.vars, signatures, branch, file)?,
                 TTS::Name => {}
                 TTS::IfKeyword => {}
                 TTS::WhileKeyword => {}
@@ -77,11 +77,19 @@ impl Function {
                 _ => return Err(format!("Invalid token {}", branch.token.text)),
             };
         }
+        self.add_end(file);
         Ok(())
     }
 
+    fn add_end(&mut self, file: &mut File) {
+        file.write_all("pop rbp\nret\n".as_bytes()).expect("Failed tor write to file!")
+    }
+
     fn add_start(&mut self, file: &mut File) {
-        file.write_all(format!("{}:", self.name).as_bytes())
+        file.write_all(format!("{}:
+    push rbp
+    mov rbp, rsp
+", self.name).as_bytes())
             .expect("Failed tor write to file!")
     }
 }

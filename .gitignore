@@ -1,7 +1,10 @@
 target/
 .vscode/
 out.asm
+out
+out.o
 *.fnc
 *.c
 *.s
 a.out
+compile.sh

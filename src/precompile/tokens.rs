@@ -24,6 +24,7 @@ pub enum TTS {
     DeclarationArgs,
     Assembly,
     AssemblyCode,
+    RegisterResult,
 }
 
 #[derive(Debug, Clone)]
@@ -170,9 +171,16 @@ impl Token {
             token_type: TTS::Assembly,
             text: String::new(),
         }
-    }pub fn assembly_code(text: &str) -> Self {
+    }
+    pub fn assembly_code(text: &str) -> Self {
         Self {
             token_type: TTS::AssemblyCode,
+            text: String::from(text),
+        }
+    }
+    pub fn register_result(text: &str) -> Self {
+        Self {
+            token_type: TTS::RegisterResult,
             text: String::from(text),
         }
     }

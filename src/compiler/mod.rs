@@ -1,6 +1,6 @@
 pub mod compile;
-mod util;
-mod functions;
+pub mod register;
+pub mod functions;
 mod assembly;
 mod operation;
-mod variables;
+pub mod variables;

@@ -28,7 +28,7 @@ section .text
 
 panic_program:
     mov rbx, QWORD[p_buf_ptr]
-    call print_buffer
+    ;call print_buffer
 
     mov rax, 60
     mov rdi, 120
@@ -39,7 +39,7 @@ _start:
     ;end execution
     
     mov rbx, QWORD[p_buf_ptr]
-    call print_buffer
+    ;call print_buffer
 
     mov rax, 60
     mov rdi, 0

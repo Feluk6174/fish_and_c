@@ -1,6 +1,6 @@
 use std::{fs::File, io::Write};
 
-use crate::{compiler::register::Register, precompile::{branch::{get_name_from_arg, Branch}, tokens::TTS}};
+use crate::precompile::{branch::{get_name_from_arg, Branch}, tokens::TTS};
 use super::{functions::{Function, Signature}, operation::operate};
 
 pub trait Size {
@@ -134,12 +134,12 @@ impl Size for Type {
 }
 
 #[derive(Debug, Clone)]
-pub struct Variable {
+struct Variable {
     name: String,
     pub var_type: Type,
     size: u64,
     pure_size: u64,
-    pub rel_pos:u64
+    rel_pos:u64
 }
 
 impl Variable {
@@ -250,18 +250,17 @@ fn store(vars: &mut Variables, name:String, file: &mut File) ->Result<(), String
         _ => return Err(String::from("Invalid variable size"))
     };
 
-    file.write_all(format!("lea rbx, [mem+{}]
-mov {}[rbx], {}
-", var.rel_pos, var.var_type.prefix()?, reg).as_bytes()).expect("Couldn't write to file!");
+    file.write_all(format!("lea rbx, [rbp+{}]
+mov [rbx], {}
+", var.rel_pos, reg).as_bytes()).expect("Couldn't write to file!");
 
     Ok(())
 }
 pub fn gen_declare_asm(vars: &mut Variables, signatures: &Vec<Signature>, branch:&Branch, file:&mut File) -> Result<(), String> {
     vars.push_branch(&branch)?;
     let name = vars.get_name_from_branch(&branch);
-    let var = vars.get(&name)?;
     println!("{:?}", branch.branches);
-    operate(&branch.branches, 2, branch.branches.len(), vars, signatures, Register::new_gen("a", var.pure_size)?, Register::new_gen("b", var.pure_size)?, Register::new_gen("c", var.pure_size)?, file)?;
+    operate(&branch.branches, 2, branch.branches.len(), vars, signatures, "rax", "rbx", file)?;
     store(vars, name, file)?;
     Ok(())
 }
