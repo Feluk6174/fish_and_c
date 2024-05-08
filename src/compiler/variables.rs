@@ -138,7 +138,7 @@ pub struct Variable {
     name: String,
     pub var_type: Type,
     size: u64,
-    pure_size: u64,
+    pub pure_size: u64,
     pub rel_pos:u64
 }
 
@@ -238,7 +238,14 @@ impl Variables {
     }
 }
 
-fn store(vars: &mut Variables, name:String, file: &mut File) ->Result<(), String> {
+pub fn is_variable(vars: &Variables, name: &str) -> bool {
+    match vars.get(name) {
+        Ok(_) => true,
+        Err(_) => false
+    }
+} 
+
+pub fn store(vars: &mut Variables, name:String, file: &mut File) ->Result<(), String> {
     
     let var = vars.get(&name)?;
 
@@ -250,18 +257,55 @@ fn store(vars: &mut Variables, name:String, file: &mut File) ->Result<(), String
         _ => return Err(String::from("Invalid variable size"))
     };
 
-    file.write_all(format!("lea rbx, [mem+{}]
+    file.write_all(format!("lea rbx, [r15+{}]
 mov {}[rbx], {}
 ", var.rel_pos, var.var_type.prefix()?, reg).as_bytes()).expect("Couldn't write to file!");
 
     Ok(())
 }
-pub fn gen_declare_asm(vars: &mut Variables, signatures: &Vec<Signature>, branch:&Branch, file:&mut File) -> Result<(), String> {
+
+
+pub fn gen_declare_asm(vars: &mut Variables, signatures: &Vec<Signature>, branch:&Branch, file: &mut File) -> Result<(), String> {
+    if branch.token.token_type == TTS::VarType {
+        gen_direct_asm(vars, signatures, branch, file)?
+    }
+    else if branch.token.token_type == TTS::Pointer {
+        gen_pointer_asm(vars, signatures, branch, file)?
+    }
+    else {
+        return Err(String::from("Expected Type"))
+    }
+
+    Ok(())
+}
+
+fn gen_direct_asm(vars: &mut Variables, signatures: &Vec<Signature>, branch:&Branch, file:&mut File) -> Result<(), String> {
     vars.push_branch(&branch)?;
     let name = vars.get_name_from_branch(&branch);
     let var = vars.get(&name)?;
-    println!("{:?}", branch.branches);
-    operate(&branch.branches, 2, branch.branches.len(), vars, signatures, Register::new_gen("a", var.pure_size)?, Register::new_gen("b", var.pure_size)?, Register::new_gen("c", var.pure_size)?, file)?;
+    operate(&name, &branch.branches, 2, branch.branches.len(), vars, signatures, &Register::new_gen("a", var.pure_size)?, &Register::new_gen("b", var.pure_size)?, &Register::new_gen("c", var.pure_size)?, file)?;
     store(vars, name, file)?;
+    Ok(())
+}
+
+fn gen_pointer_asm(vars: &mut Variables, signatures: &Vec<Signature>, branch:&Branch, file:&mut File) -> Result<(), String> {
+    vars.push_branch(&branch)?;
+    let name = vars.get_name_from_branch(&branch);
+    let var = vars.get(&name)?;
+    operate(&name, &branch.branches, 2, branch.branches.len(), vars, signatures, &Register::new_gen("a", var.pure_size)?, &Register::new_gen("b", var.pure_size)?, &Register::new_gen("c", var.pure_size)?, file)?;
+    store(vars, name, file)?;
+    Ok(())
+}
+
+pub fn assignate_var(name:&str, vars: &mut Variables, signatures: &Vec<Signature>, branch:&Branch, file: &mut File) -> Result<(), String> {
+    let var = vars.get(name)?;
+    operate(name, &branch.branches, 0, branch.branches.len(), vars, signatures, &Register::new_gen("a", var.pure_size)?, &Register::new_gen("b", var.pure_size)?, &Register::new_gen("c", var.pure_size)?, file)?;
+    store(vars, String::from(name), file)?;
+    Ok(())
+}
+
+pub fn load_address(vars: &Variables, name:&str, reg: &Register, file: &mut File) -> Result<(), String>{
+    let var = vars.get(name)?;
+    file.write_all(format!("lea {}, [r15+{}]\n", reg.name, var.rel_pos).as_bytes()).expect("Couldn't write to file!");
     Ok(())
 }

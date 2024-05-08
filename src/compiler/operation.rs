@@ -1,14 +1,18 @@
-use super::{functions::Signature, register::Register, variables::Variables};
-use crate::precompile::{
-    branch::Branch,
-    tokens::{Token, TTS},
+use super::{
+    functions::Signature,
+    register::{store_reg_to_mem, Register},
+    variables::{load_address, Variables},
 };
 use crate::types::{
     literals::{load_number_literal, load_register_result},
-    unsigned::{
-        add, sub, mul,
-        load_unsigned
+    unsigned::{add, div, load_pointer_op, load_unsigned, mul, sub},
+};
+use crate::{
+    precompile::{
+        branch::Branch,
+        tokens::{Token, TTS},
     },
+    types::unsigned::load_pointer_name,
 };
 use std::{fs::File, io::Write};
 
@@ -32,11 +36,18 @@ fn get_priority(token: &Token) -> Result<u8, String> {
     }
 }
 
-fn load_branch(num: &Branch, store_reg: &Register, assist_reg: &Register, vars: &Variables, functions: &Vec<Signature>, file: &mut File) -> Result<(), String> {
+fn load_branch(
+    num: &Branch,
+    store_reg: &Register,
+    assist_reg: &Register,
+    vars: &Variables,
+    functions: &Vec<Signature>,
+    file: &mut File,
+) -> Result<(), String> {
     match num.token.token_type {
         TTS::NumberLiteral => load_number_literal(&num.token.text, assist_reg, file),
-        TTS::Pointer => (),
-        TTS::Address => (),
+        TTS::Pointer => load_pointer_name(vars, num, assist_reg, file)?,
+        TTS::Address => load_address(vars, &num.branches[0].token.text, assist_reg, file)?,
         TTS::Name => load_unsigned(assist_reg, num, vars, functions, file)?,
         TTS::Parenthesis => (),
         TTS::RegisterResult => load_register_result(&num.token.text, assist_reg, file),
@@ -56,15 +67,8 @@ fn gen_op_asm(
     functions: &Vec<Signature>,
     file: &mut File,
 ) -> Result<(), String> {
-    println!(
-        "op1: {:?} {:?} {:?}",
-        num1.token.token_type, operation.token_type, num2.token.token_type
-    );
-    println!(
-        "op2: {} {} {}",
-        num1.token.text, operation.text, num2.token.text
-    );
-
+    file.write_all(format!(";{}\n", operation.text).as_bytes())
+        .unwrap();
     load_branch(num1, store_reg, assist_reg_1, vars, functions, file)?;
     load_branch(num2, store_reg, assist_reg_2, vars, functions, file)?;
 
@@ -72,7 +76,7 @@ fn gen_op_asm(
         "+" => add(store_reg, assist_reg_1, assist_reg_2, file),
         "-" => sub(store_reg, assist_reg_1, assist_reg_2, file),
         "*" => mul(store_reg, assist_reg_1, assist_reg_2, file),
-        "/" => (),
+        "/" => div(store_reg, assist_reg_1, assist_reg_2, file),
         "%" => (),
         "==" => (),
         "<" => (),
@@ -81,8 +85,6 @@ fn gen_op_asm(
         "<=" => (),
         _ => return Err(format!("{} unrecognised operation", operation.text)),
     }
-    file.write_all(format!(";{}\n", operation.text).as_bytes())
-        .unwrap();
     Ok(())
 }
 
@@ -102,14 +104,20 @@ fn real_op<'a>(
         if operation_stack.len() == 0 {
             break;
         };
-        // println!("{} >= {} ?", &operation_stack.last().unwrap().token.text, &operation.text);
-        // println!("{} >= {} ?", get_priority(&operation_stack.last().unwrap().token)?, get_priority(&operation)?);
         if get_priority(&operation_stack.last().unwrap().token) >= get_priority(&operation) {
             let num2 = data_stack.pop().unwrap();
             let num1 = data_stack.pop().unwrap();
             let op = &operation_stack.pop().unwrap().token;
             gen_op_asm(
-                op, num1, num2, &store_reg, &assist_reg_1, &assist_reg_2, vars, signatures, file,
+                op,
+                num1,
+                num2,
+                &store_reg,
+                &assist_reg_1,
+                &assist_reg_2,
+                vars,
+                signatures,
+                file,
             )?;
             data_stack.push(store_branch);
         } else {
@@ -120,25 +128,23 @@ fn real_op<'a>(
 }
 
 pub fn operate(
+    name: &str,
     args: &Vec<Branch>,
     min: usize,
     max: usize,
     vars: &mut Variables,
     signatures: &Vec<Signature>,
-    store_reg: Register,
-    assist_reg_1: Register,
-    assist_reg_2: Register,
+    store_reg: &Register,
+    assist_reg_1: &Register,
+    assist_reg_2: &Register,
     file: &mut File,
 ) -> Result<(), String> {
     let mut operation_stack: Vec<&Branch> = Vec::new();
     let mut data_stack: Vec<&Branch> = Vec::new();
     let store_branch = Branch::new(Token::register_result(&store_reg.name));
+    let temp_branch = Branch::new(Token::name(name));
 
     for i in min..max {
-        println!(
-            "real: {:?} {}",
-            args[i].token.token_type, args[i].token.text
-        );
         if is_operation(&args[i].token) {
             real_op(
                 &args[i].token,
@@ -153,6 +159,37 @@ pub fn operate(
                 file,
             )?;
             operation_stack.push(&args[i])
+        } else if args[i].token.token_type == TTS::Parenthesis {
+            if data_stack.len() > 0 {
+                if data_stack[data_stack.len() - 1].token.token_type == TTS::RegisterResult {
+                    store_reg_to_mem(vars, String::from(name), store_reg, file)?;
+                    data_stack.pop();
+                    data_stack.push(&temp_branch);
+                }
+            }
+            operate(
+                name,
+                &args[i].branches[0].branches,
+                0,
+                args[i].branches[0].branches.len(),
+                vars,
+                signatures,
+                &store_reg,
+                &assist_reg_1,
+                &assist_reg_2,
+                file,
+            )?;
+
+            data_stack.push(&store_branch)
+        } else if args[i].token.token_type == TTS::Pointer && args[i].branches[0].token.token_type == TTS::Parenthesis {
+            if data_stack.len() > 0 {
+                if data_stack[data_stack.len() - 1].token.token_type == TTS::RegisterResult {
+                    store_reg_to_mem(vars, String::from(name), store_reg, file)?;
+                    data_stack.pop();
+                    data_stack.push(&temp_branch);
+                }
+            }
+            load_pointer_op(name, vars, signatures, &args[i], store_reg, assist_reg_1, assist_reg_2, file)?;
         } else {
             data_stack.push(&args[i])
         }
@@ -171,9 +208,15 @@ pub fn operate(
             &assist_reg_2,
             file,
         )?;
-    }
-    else {
-        load_branch(data_stack[0], &assist_reg_1, &store_reg, vars, signatures, file)?;
+    } else {
+        load_branch(
+            data_stack[0],
+            &assist_reg_1,
+            &store_reg,
+            vars,
+            signatures,
+            file,
+        )?;
     }
 
     Ok(())

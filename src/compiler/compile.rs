@@ -35,6 +35,7 @@ panic_program:
     syscall
 
 _start:
+    lea r15, [mem]
     call main
     ;end execution
     
