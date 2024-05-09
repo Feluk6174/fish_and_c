@@ -1,2 +1,9 @@
 target/
 .vscode/
+out.asm
+out
+out.o
+*.c
+*.s
+a.out
+compile.sh

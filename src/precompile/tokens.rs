@@ -1,6 +1,7 @@
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TTS {
-    Literal,
+    NumberLiteral,
+    StringLiteral,
     VarType,
     Name,
     Function,
@@ -21,6 +22,9 @@ pub enum TTS {
     Address,
     Pointer,
     DeclarationArgs,
+    Assembly,
+    AssemblyCode,
+    RegisterResult,
 }
 
 #[derive(Debug, Clone)]
@@ -30,9 +34,15 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn literal(text: &str) -> Self {
+    pub fn number_literal(text: &str) -> Self {
         Self {
-            token_type: TTS::Literal,
+            token_type: TTS::NumberLiteral,
+            text: String::from(text),
+        }
+    }
+    pub fn string_literal(text: &str) -> Self {
+        Self {
+            token_type: TTS::StringLiteral,
             text: String::from(text),
         }
     }
@@ -154,6 +164,24 @@ impl Token {
         Self {
             token_type: TTS::DeclarationArgs,
             text: String::new(),
+        }
+    }
+    pub fn assembly() -> Self {
+        Self {
+            token_type: TTS::Assembly,
+            text: String::new(),
+        }
+    }
+    pub fn assembly_code(text: &str) -> Self {
+        Self {
+            token_type: TTS::AssemblyCode,
+            text: String::from(text),
+        }
+    }
+    pub fn register_result(text: &str) -> Self {
+        Self {
+            token_type: TTS::RegisterResult,
+            text: String::from(text),
         }
     }
 }

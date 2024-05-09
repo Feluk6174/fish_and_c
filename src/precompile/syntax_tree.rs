@@ -1,5 +1,5 @@
-use crate::precompile::tokens::{Token, TTS};
-use crate::precompile::branch::Branch;
+use super::tokens::{Token, TTS};
+use super::branch::Branch;
 
 fn get_type_branch(
     tokens: &Vec<Token>,
@@ -77,7 +77,7 @@ fn declare_arguments(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize),
     let mut depth: usize = 0;
     let mut last: Branch;
     while !(tokens[idx + depth].token_type == TTS::Parenthesis && tokens[idx + depth].text == ")") {
-        match get_type_branch(tokens, idx, 0) {
+        match get_type_branch(tokens, idx+depth, 0) {
             Ok(branch) => {
                 last = branch.0;
                 depth += branch.1 + 1;
@@ -106,7 +106,22 @@ fn operation(
     }
     while !(tokens[idx + depth].token_type == TTS::NewCommand) {
         let mut temp = Branch::new(tokens[idx + depth].clone());
-        if tokens[idx + depth].token_type == TTS::Pointer {
+        if tokens[idx + depth].token_type == TTS::Pointer && tokens[idx + depth + 1].token_type == TTS::Parenthesis && tokens[idx + depth + 1].text == "("{
+            depth += 1;
+            match parenthesis_operation(tokens, idx+depth, Branch::new(tokens[idx+depth].clone()))? {
+                branch => {
+                    temp.branches.push(branch.0);
+                    depth += branch.1;
+                }
+            }
+            parent.branches.push(temp);
+        }
+        else if tokens[idx + depth].token_type == TTS::Pointer {
+            depth += 1;
+            temp.branches.push(Branch::new(tokens[idx + depth].clone()));
+            parent.branches.push(temp);
+        }
+        else if tokens[idx + depth].token_type == TTS::Address {
             depth += 1;
             temp.branches.push(Branch::new(tokens[idx + depth].clone()));
             parent.branches.push(temp);
@@ -115,6 +130,69 @@ fn operation(
             let branch = func_call_tree(tokens, idx+depth)?;
             parent.branches.push(branch.0);
             depth += branch.1;
+        }
+        else if tokens[idx+depth].token_type == TTS::Parenthesis && tokens[idx+depth].text == "(" {
+            match parenthesis_operation(tokens, idx+depth, Branch::new(tokens[idx+depth].clone()))? {
+                branch => {
+                    temp.branches.push(branch.0);
+                    depth += branch.1;
+                }
+            }
+            parent.branches.push(temp);
+        }
+        else {
+            parent.branches.push(temp);
+        }
+        depth += 1;
+    }
+    Ok((parent, depth))
+}
+
+fn parenthesis_operation(
+    tokens: &Vec<Token>,
+    idx: usize,
+    mut parent: Branch,
+) -> Result<(Branch, usize), String> {
+    let mut depth: usize = 0;
+    if tokens[idx].token_type == TTS::Parenthesis && tokens[idx].text == ")" {
+        return Err(String::from("Empty paretethis"));
+    }
+    depth += 1;
+    while !(tokens[idx + depth].token_type == TTS::Parenthesis && tokens[idx+depth].text == ")") {
+        let mut temp = Branch::new(tokens[idx + depth].clone());
+        if tokens[idx + depth].token_type == TTS::Pointer && tokens[idx + depth + 1].token_type == TTS::Parenthesis && tokens[idx + depth + 1].text == "("{
+            depth += 1;
+            match parenthesis_operation(tokens, idx+depth, Branch::new(tokens[idx+depth].clone()))? {
+                branch => {
+                    temp.branches.push(branch.0);
+                    depth += branch.1;
+                }
+            }
+            parent.branches.push(temp);
+        }
+        else if tokens[idx + depth].token_type == TTS::Pointer {
+            depth += 1;
+            temp.branches.push(Branch::new(tokens[idx + depth].clone()));
+            parent.branches.push(temp);
+        }
+        else if tokens[idx + depth].token_type == TTS::Address {
+            depth += 1;
+            temp.branches.push(Branch::new(tokens[idx + depth].clone()));
+            parent.branches.push(temp);
+        }
+        else if tokens[idx + depth].token_type == TTS::Name && tokens[idx + depth + 1].token_type == TTS::Parenthesis && tokens[idx + depth + 1].text == "(" {
+            let branch = func_call_tree(tokens, idx+depth)?;
+            parent.branches.push(branch.0);
+            depth += branch.1;
+        }
+        else if tokens[idx+depth].token_type == TTS::Parenthesis && tokens[idx+depth].text == "(" {
+            match parenthesis_operation(tokens, idx+depth, Branch::new(tokens[idx+depth].clone()))? {
+                branch => {
+                    temp.branches.push(branch.0);
+                    depth += branch.1;
+                }
+            }
+            parent.branches.push(temp);
         }
         else {
             parent.branches.push(temp);
@@ -320,6 +398,22 @@ fn func_call_tree(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize), St
     Ok((parent, depth))
 }
 
+fn assembly_tree(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize), String> {
+    let mut parent = Branch::new(tokens[idx].clone());
+    if tokens[idx+1].token_type != TTS::Keys || tokens[idx+1].text != "{" {
+        return Err(String::from("Expected { after asm"));
+    }
+    if tokens[idx+3].token_type != TTS::Keys || tokens[idx+3].text != "}" {
+        return Err(String::from("Expected } after asm"));
+    }
+    if tokens[idx+2].token_type != TTS::AssemblyCode {
+        return Err(String::from("Expected assembly code after asm"));
+    }
+    parent.branches.push(Branch::new(tokens[idx+2].clone()));
+    Ok((parent, 4))
+
+}
+
 fn code_block(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize), String> {
     let mut branch: Branch = Branch::new(tokens[idx].clone());
     let mut depth: usize = 0;
@@ -373,6 +467,13 @@ fn code_block(tokens: &Vec<Token>, idx: usize) -> Result<(Branch, usize), String
                 }
                 Err(err) => return Err(err),
             },
+            TTS::Assembly => match assembly_tree(tokens, idx+depth) {
+                Ok(operations) => {
+                    branch.branches.push(operations.0);
+                    depth += operations.1;
+                }
+                Err(err) => return Err(err),
+            }
             _ => return Err(format!("{:?} Not implmented", tokens[idx+depth].text)),
         }
         depth += 1;

@@ -8,7 +8,7 @@ pub fn read_file<S: AsRef<str>>(file_name: S) -> Result<String, String> {
     }
 }
 
-pub fn preprosess(raw_code: String) -> Result<(String, Vec<(String, String)>), String> {
+pub fn preprocess(raw_code: String) -> Result<(String, Vec<(String, String)>), String> {
     let parts = raw_code.as_str().split("#HEADER");
     let mut headers = String::new();
     let mut code = String::new();
@@ -19,10 +19,10 @@ pub fn preprosess(raw_code: String) -> Result<(String, Vec<(String, String)>), S
             code += part;
         }
     }
-    macro_prossesor(headers, code, Vec::new())
+    macro_processor(headers, code, Vec::new())
 }
 
-fn macro_prossesor(
+fn macro_processor(
     headers: String,
     mut code: String,
     mut definitions: Vec<(String, String)>,
@@ -62,7 +62,7 @@ fn import_file(
 ) -> Result<(String, Vec<(String, String)>), String> {
     match read_file(path) {
         Ok(raw_code) => {
-            return match preprosess(raw_code) {
+            return match preprocess(raw_code) {
                 Ok(res) => {
                     code += &res.0;
                     definitions.extend(res.1);
