@@ -1,5 +1,5 @@
 use super::{
-    functions::Signature,
+    functions::{function_call, is_function, Signature},
     register::{store_reg_to_mem, Register},
     variables::{load_address, Variables},
 };
@@ -88,13 +88,13 @@ fn gen_op_asm(
     Ok(())
 }
 
-fn real_op<'a>(
+fn real_op(
     operation: &Token,
-    operation_stack: &mut Vec<&Branch>,
-    data_stack: &mut Vec<&'a Branch>,
+    operation_stack: &mut Vec<Branch>,
+    data_stack: &mut Vec<Branch>,
     vars: &mut Variables,
     signatures: &Vec<Signature>,
-    store_branch: &'a Branch,
+    store_branch: &Branch,
     store_reg: &Register,
     assist_reg_1: &Register,
     assist_reg_2: &Register,
@@ -110,8 +110,8 @@ fn real_op<'a>(
             let op = &operation_stack.pop().unwrap().token;
             gen_op_asm(
                 op,
-                num1,
-                num2,
+                &num1,
+                &num2,
                 &store_reg,
                 &assist_reg_1,
                 &assist_reg_2,
@@ -119,7 +119,7 @@ fn real_op<'a>(
                 signatures,
                 file,
             )?;
-            data_stack.push(store_branch);
+            data_stack.push(store_branch.clone());
         } else {
             break;
         }
@@ -127,7 +127,7 @@ fn real_op<'a>(
     Ok(())
 }
 
-pub fn operate(
+pub fn operate<'a>(
     name: &str,
     args: &Vec<Branch>,
     min: usize,
@@ -139,10 +139,11 @@ pub fn operate(
     assist_reg_2: &Register,
     file: &mut File,
 ) -> Result<(), String> {
-    let mut operation_stack: Vec<&Branch> = Vec::new();
-    let mut data_stack: Vec<&Branch> = Vec::new();
+    let mut operation_stack: Vec<Branch> = Vec::new();
+    let mut data_stack: Vec<Branch> = Vec::new();
     let store_branch = Branch::new(Token::register_result(&store_reg.name));
     let temp_branch = Branch::new(Token::name(name));
+    let mut function_results: Vec<Box<Branch>> = Vec::new();
 
     for i in min..max {
         if is_operation(&args[i].token) {
@@ -158,13 +159,13 @@ pub fn operate(
                 &assist_reg_2,
                 file,
             )?;
-            operation_stack.push(&args[i])
+            operation_stack.push(args[i].clone())
         } else if args[i].token.token_type == TTS::Parenthesis {
             if data_stack.len() > 0 {
                 if data_stack[data_stack.len() - 1].token.token_type == TTS::RegisterResult {
                     store_reg_to_mem(vars, String::from(name), store_reg, file)?;
                     data_stack.pop();
-                    data_stack.push(&temp_branch);
+                    data_stack.push(temp_branch.clone());
                 }
             }
             operate(
@@ -180,18 +181,29 @@ pub fn operate(
                 file,
             )?;
 
-            data_stack.push(&store_branch)
+            data_stack.push(store_branch.clone())
         } else if args[i].token.token_type == TTS::Pointer && args[i].branches[0].token.token_type == TTS::Parenthesis {
             if data_stack.len() > 0 {
                 if data_stack[data_stack.len() - 1].token.token_type == TTS::RegisterResult {
                     store_reg_to_mem(vars, String::from(name), store_reg, file)?;
                     data_stack.pop();
-                    data_stack.push(&temp_branch);
+                    data_stack.push(temp_branch.clone());
                 }
             }
             load_pointer_op(name, vars, signatures, &args[i], store_reg, assist_reg_1, assist_reg_2, file)?;
+        } else if args[i].token.token_type == TTS::Name && is_function(signatures, &args[i].token.text) {
+            println!("{} {}", &args[i].token.text, is_function(signatures, &args[i].token.text));
+            if data_stack.len() > 0 {
+                if data_stack[data_stack.len() - 1].token.token_type == TTS::RegisterResult {
+                    store_reg_to_mem(vars, String::from(name), store_reg, file)?;
+                    data_stack.pop();
+                    data_stack.push(temp_branch.clone());
+                }
+            }
+            let reg = function_call(&args[i].token.text, signatures, vars, file, &args[i])?;
+            data_stack.push(Branch::new(Token::register_result(&reg.name)));
         } else {
-            data_stack.push(&args[i])
+            data_stack.push(args[i].clone())
         }
     }
 
@@ -210,7 +222,7 @@ pub fn operate(
         )?;
     } else {
         load_branch(
-            data_stack[0],
+            &data_stack[0],
             &assist_reg_1,
             &store_reg,
             vars,

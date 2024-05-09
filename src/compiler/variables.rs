@@ -1,6 +1,6 @@
 use std::{fs::File, io::Write};
 
-use crate::{compiler::register::Register, precompile::{branch::{get_name_from_arg, Branch}, tokens::TTS}};
+use crate::{compiler::register::Register, precompile::{branch::{get_name_from_arg, Branch}, tokens::TTS}, types::literals::declare_string_literal};
 use super::{functions::{Function, Signature}, operation::operate};
 
 pub trait Size {
@@ -143,6 +143,15 @@ pub struct Variable {
 }
 
 impl Variable {
+    pub fn new_direct(name:&str, var_type: Type, rel_pos: u64) -> Result<Self, String> {
+        Ok(Self {
+            name: String::from(name),
+            var_type,
+            pure_size: var_type.pure_size()?,
+            size: var_type.size()?,
+            rel_pos
+        })
+    }
     pub fn new(branch: &Branch, rel_pos:u64) -> Result<Self, String> {
         let t = Type::new(&branch.branches[0])?;
         let name = branch.branches[1].token.text.clone();
@@ -264,13 +273,39 @@ mov {}[rbx], {}
     Ok(())
 }
 
+pub fn store_ptr(vars: &mut Variables, name:String, file: &mut File) ->Result<(), String> {
+    
+    let var = vars.get(&name)?;
+
+    let reg = match var.var_type.pure_size()? {
+        1 => "al",
+        2 => "ax",
+        4 => "eax",
+        8 => "rax",
+        _ => return Err(String::from("Invalid variable size"))
+    };
+
+    file.write_all(format!("lea rsi, [r15+{}]
+mov rbx, [rsi]
+mov {}[rbx], {}
+", var.rel_pos, var.var_type.prefix()?, reg).as_bytes()).expect("Couldn't write to file!");
+
+    Ok(())
+}
+
 
 pub fn gen_declare_asm(vars: &mut Variables, signatures: &Vec<Signature>, branch:&Branch, file: &mut File) -> Result<(), String> {
     if branch.token.token_type == TTS::VarType {
         gen_direct_asm(vars, signatures, branch, file)?
     }
     else if branch.token.token_type == TTS::Pointer {
-        gen_pointer_asm(vars, signatures, branch, file)?
+        if branch.branches[0].token.token_type == TTS::VarType {
+            gen_pointer_asm(vars, signatures, branch, file)?
+        } else if branch.branches[0].token.token_type == TTS::Name {
+            assignate_var_ptr(&branch.branches[0].token.text, vars, signatures, branch, file)?
+        } else if branch.branches[2].token.token_type == TTS::StringLiteral {
+            declare_string_literal(&branch.branches[1].token.text, vars, &branch.branches[2].token.text, file)?
+        }
     }
     else {
         return Err(String::from("Expected Type"))
@@ -301,6 +336,13 @@ pub fn assignate_var(name:&str, vars: &mut Variables, signatures: &Vec<Signature
     let var = vars.get(name)?;
     operate(name, &branch.branches, 0, branch.branches.len(), vars, signatures, &Register::new_gen("a", var.pure_size)?, &Register::new_gen("b", var.pure_size)?, &Register::new_gen("c", var.pure_size)?, file)?;
     store(vars, String::from(name), file)?;
+    Ok(())
+}
+
+pub fn assignate_var_ptr(name:&str, vars: &mut Variables, signatures: &Vec<Signature>, branch:&Branch, file: &mut File) -> Result<(), String> {
+    let var = vars.get(name)?;
+    operate(name, &branch.branches, 0, branch.branches.len(), vars, signatures, &Register::new_gen("a", var.pure_size)?, &Register::new_gen("b", var.pure_size)?, &Register::new_gen("c", var.pure_size)?, file)?;
+    store_ptr(vars, String::from(name), file)?;
     Ok(())
 }
 

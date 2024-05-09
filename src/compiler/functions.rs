@@ -5,7 +5,7 @@ use super::variables::{assignate_var, is_variable, Size, Type, Variables};
 use crate::compiler::variables::gen_declare_asm;
 use crate::precompile::branch::{get_name_from_arg, Branch};
 use crate::precompile::tokens::TTS;
-use std::collections::HashMap;
+use crate::runtime::functions::{builtin, builtin_functions};
 use std::fs::File;
 use std::io::Write;
 use std::iter::zip;
@@ -83,7 +83,9 @@ impl Function {
                     function_call(&branch.token.text, signatures, &mut self.vars, file, branch)?;
                 } else if is_variable(&self.vars, &branch.token.text) {
                     assignate_var(&branch.token.text, &mut self.vars, signatures, branch, file)?
-                } else {},
+                } else {
+                    return Err(format!("Undeclared name {}!", branch.token.text))
+                },
                 TTS::IfKeyword => {}
                 TTS::WhileKeyword => {}
                 TTS::ReturnKeyword => {}
@@ -143,6 +145,12 @@ pub fn is_function(signatures: &Vec<Signature>, name: &str) -> bool {
         }
     }
 
+    for fname in builtin_functions {
+        if fname == name {
+            return true
+        }
+    }
+
     false
 }
 
@@ -155,7 +163,10 @@ fn get_sign<'a>(name: &str, signatures: &'a Vec<Signature>) -> Result<&'a Signat
     Err(format!("Function {} not found", name))
 }
 
-pub fn function_call(name:&str, signatures: &Vec<Signature>, vars: &mut Variables, file: &mut File, branch: &Branch) -> Result<(), String> {
+pub fn function_call(name:&str, signatures: &Vec<Signature>, vars: &mut Variables, file: &mut File, branch: &Branch) -> Result<Register, String> {
+    if builtin(name, branch, vars, signatures, &Register::new_gen("8", 8)?, file)? {
+        return Ok(Register::new_gen("8", 8)?)
+    }
     let signature = get_sign(name, signatures)?;
     let mut rel_pos:u64  = vars.rel_pos;
     for (t, arg) in zip(&signature.args,&branch.branches) {
@@ -174,5 +185,5 @@ call {}
 pop r15
 ", vars.rel_pos, name).as_bytes()).expect("Failed to write to file");
 
-    Ok(())
+    Ok(Register::new_gen("8", signature.return_type.pure_size()?)?)
 }

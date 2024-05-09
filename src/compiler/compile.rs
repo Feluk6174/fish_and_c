@@ -26,9 +26,29 @@ section .data
 
 section .text
 
+print_buffer:
+    push rcx
+    push rax
+    push rsi
+    push rdi
+    push r11
+
+    mov rax, 1          ; syscall for syswrite
+    mov rdi, 1          ; stdout file descriptor
+    mov rsi, p_buf      ; bytes to write (by reference?)
+    mov rdx, rbx        ; number of bytes to write
+    syscall             ; call syscall
+
+    pop r11
+    pop rdi
+    pop rsi
+    pop rax
+    pop rcx
+    ret
+
 panic_program:
     mov rbx, QWORD[p_buf_ptr]
-    ;call print_buffer
+    call print_buffer
 
     mov rax, 60
     mov rdi, 120
@@ -40,7 +60,7 @@ _start:
     ;end execution
     
     mov rbx, QWORD[p_buf_ptr]
-    ;call print_buffer
+    call print_buffer
 
     mov rax, 60
     mov rdi, 0
