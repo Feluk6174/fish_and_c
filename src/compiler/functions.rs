@@ -1,4 +1,5 @@
 use super::assembly::gen_asm_asm;
+use super::comparison::gen_if_asm;
 use super::operation::operate;
 use super::register::Register;
 use super::variables::{assignate_var, is_variable, Size, Type, Variables};
@@ -34,6 +35,7 @@ pub struct Function {
     pub code: Branch,
     pub args: Vec<Type>,
     pub vars: Variables,
+    pub ifs: (Vec<u64>, u64)
 }
 
 impl Function {
@@ -56,7 +58,6 @@ impl Function {
             )?;
         }
 
-        println!("{:?} {}", vars.names(), vars.rel_pos);
 
         Ok(Self {
             name: tree[idx].branches[1].token.text.clone(),
@@ -64,6 +65,7 @@ impl Function {
             code: tree[idx + 1].clone(),
             args: args,
             vars: vars,
+            ifs: (Vec::new(), 0)
         })
     }
 
@@ -73,8 +75,18 @@ impl Function {
         mut signatures: &Vec<Signature>,
     ) -> Result<(), String> {
         self.add_start(file);
-        for branch in &self.code.branches {
-            // println!("{:?}", branch.token);
+        self.process_custom(file, signatures,&self.code.clone())?;
+        self.add_end(file);
+        Ok(())
+    }
+
+    pub fn process_custom(
+        &mut self,
+        file: &mut File,
+        mut signatures: &Vec<Signature>,
+        branch: &Branch
+    ) -> Result<(), String> {
+        for branch in &branch.branches {
             match branch.token.token_type {
                 TTS::Pointer | TTS::VarType => {
                     gen_declare_asm(&mut self.vars, signatures, branch, file)?
@@ -86,7 +98,9 @@ impl Function {
                 } else {
                     return Err(format!("Undeclared name {}!", branch.token.text))
                 },
-                TTS::IfKeyword => {}
+                TTS::IfKeyword => {
+                    gen_if_asm(&branch, signatures, self, file)?
+                },
                 TTS::WhileKeyword => {}
                 TTS::ReturnKeyword => {}
                 TTS::BreakKeyword => {}
@@ -95,7 +109,6 @@ impl Function {
                 _ => return Err(format!("Invalid token {}", branch.token.text)),
             };
         }
-        self.add_end(file);
         Ok(())
     }
 
@@ -175,7 +188,6 @@ pub fn function_call(name:&str, signatures: &Vec<Signature>, vars: &mut Variable
         operate("None", &arg.branches, 0, 1, vars, signatures, &reg, &Register::new_gen("c", t.pure_size()?)?, &Register::new_gen("d", t.pure_size()?)?, file)?;
         file.write_all(format!("lea rsi, [r15+{}]
 mov {}[rsi], {}\n", rel_pos, reg.prefix(), reg.name).as_bytes()).expect("Failed to write to file");
-        println!("{} {}", rel_pos, t.pure_size()?);
         rel_pos += t.pure_size()?;
 
     }

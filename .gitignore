@@ -7,3 +7,5 @@ out.o
 *.s
 a.out
 compile.sh
+fish*
+test.fnc

@@ -192,7 +192,6 @@ pub fn operate<'a>(
             }
             load_pointer_op(name, vars, signatures, &args[i], store_reg, assist_reg_1, assist_reg_2, file)?;
         } else if args[i].token.token_type == TTS::Name && is_function(signatures, &args[i].token.text) {
-            println!("{} {}", &args[i].token.text, is_function(signatures, &args[i].token.text));
             if data_stack.len() > 0 {
                 if data_stack[data_stack.len() - 1].token.token_type == TTS::RegisterResult {
                     store_reg_to_mem(vars, String::from(name), store_reg, file)?;
