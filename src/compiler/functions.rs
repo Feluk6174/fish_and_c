@@ -1,5 +1,6 @@
 use super::assembly::gen_asm_asm;
 use super::comparison::gen_if_asm;
+use super::loops::gen_while_asm;
 use super::operation::operate;
 use super::register::Register;
 use super::variables::{assignate_var, is_variable, Size, Type, Variables};
@@ -35,7 +36,8 @@ pub struct Function {
     pub code: Branch,
     pub args: Vec<Type>,
     pub vars: Variables,
-    pub ifs: (Vec<u64>, u64)
+    pub ifs: (Vec<u64>, u64),
+    pub loops: (Vec<u64>, u64),
 }
 
 impl Function {
@@ -65,7 +67,8 @@ impl Function {
             code: tree[idx + 1].clone(),
             args: args,
             vars: vars,
-            ifs: (Vec::new(), 0)
+            ifs: (Vec::new(), 0),
+            loops: (Vec::new(), 0)
         })
     }
 
@@ -101,10 +104,12 @@ impl Function {
                 TTS::IfKeyword => {
                     gen_if_asm(&branch, signatures, self, file)?
                 },
-                TTS::WhileKeyword => {}
-                TTS::ReturnKeyword => {}
-                TTS::BreakKeyword => {}
-                TTS::ContinueKeyword => {}
+                TTS::WhileKeyword => {
+                    gen_while_asm(branch, signatures, self, file)?
+                }
+                TTS::ReturnKeyword => return Err(String::from("Return still not implemented, cooming soon")),
+                TTS::BreakKeyword => return Err(String::from("BReak still not implemented, cooming soon")),
+                TTS::ContinueKeyword => return Err(String::from("Continue still not implemented, cooming soon")),
                 TTS::Assembly => gen_asm_asm(&branch, file)?,
                 _ => return Err(format!("Invalid token {}", branch.token.text)),
             };
