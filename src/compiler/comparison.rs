@@ -13,7 +13,7 @@ pub fn gen_if_asm(branch: &Branch, signatures: &Vec<Signature>, function: &mut F
     function.ifs.1 += 1;
     function.ifs.0.push(function.ifs.1);
 
-    operate("None", &branch.branches, 0, branch.branches.len() - extra, &mut function.vars, signatures, &Register::new_gen("a", 1)?, &Register::new_gen("b", 1)?, &Register::new_gen("c", 1)?, file)?;
+    operate("None", &branch.branches, 0, branch.branches.len() - extra, &mut function.vars, signatures, &Register::new_gen("a", 1)?, &Register::new_gen("b", 1)?, &Register::new_gen("c", 1)?, &mut function.comp_idx, file)?;
     
     file.write_all(format!("cmp al, 0
 je else{}\n", function.ifs.1).as_bytes()).expect("Failed to write to file");

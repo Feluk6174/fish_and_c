@@ -14,7 +14,7 @@ pub fn gen_while_asm(branch: &Branch, signatures: &Vec<Signature>, function: &mu
 
     file.write_all(format!("do{}:\n", function.loops.1).as_bytes()).expect("Failed to write to file");
     
-    operate("None", &branch.branches, 0, branch.branches.len() - 1, &mut function.vars, signatures, &Register::new_gen("a", 1)?, &Register::new_gen("b", 1)?, &Register::new_gen("c", 1)?, file)?;
+    operate("None", &branch.branches, 0, branch.branches.len() - 1, &mut function.vars, signatures, &Register::new_gen("a", 1)?, &Register::new_gen("b", 1)?, &Register::new_gen("c", 1)?, &mut function.comp_idx, file)?;
     
     file.write_all(format!("cmp al, 0
 je done{}\n", function.loops.1).as_bytes()).expect("Failed to write to file");

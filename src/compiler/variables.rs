@@ -284,15 +284,15 @@ mov {}[rbx], {}
 }
 
 
-pub fn gen_declare_asm(vars: &mut Variables, signatures: &Vec<Signature>, branch:&Branch, file: &mut File) -> Result<(), String> {
+pub fn gen_declare_asm(vars: &mut Variables, signatures: &Vec<Signature>, branch:&Branch, comp_idx: &mut u64, file: &mut File) -> Result<(), String> {
     if branch.token.token_type == TTS::VarType {
-        gen_direct_asm(vars, signatures, branch, file)?
+        gen_direct_asm(vars, signatures, branch, comp_idx, file)?
     }
     else if branch.token.token_type == TTS::Pointer {
         if branch.branches[0].token.token_type == TTS::VarType {
-            gen_pointer_asm(vars, signatures, branch, file)?
+            gen_pointer_asm(vars, signatures, branch, comp_idx, file)?
         } else if branch.branches[0].token.token_type == TTS::Name {
-            assignate_var_ptr(&branch.branches[0].token.text, vars, signatures, branch, file)?
+            assignate_var_ptr(&branch.branches[0].token.text, vars, signatures, branch, comp_idx, file)?
         } else if branch.branches[2].token.token_type == TTS::StringLiteral {
             declare_string_literal(&branch.branches[1].token.text, vars, &branch.branches[2].token.text, file)?
         }
@@ -304,34 +304,34 @@ pub fn gen_declare_asm(vars: &mut Variables, signatures: &Vec<Signature>, branch
     Ok(())
 }
 
-fn gen_direct_asm(vars: &mut Variables, signatures: &Vec<Signature>, branch:&Branch, file:&mut File) -> Result<(), String> {
+fn gen_direct_asm(vars: &mut Variables, signatures: &Vec<Signature>, branch:&Branch, comp_idx: &mut u64, file:&mut File) -> Result<(), String> {
     vars.push_branch(&branch)?;
     let name = vars.get_name_from_branch(&branch);
     let var = vars.get(&name)?;
-    operate(&name, &branch.branches, 2, branch.branches.len(), vars, signatures, &Register::new_gen("a", var.pure_size)?, &Register::new_gen("b", var.pure_size)?, &Register::new_gen("c", var.pure_size)?, file)?;
+    operate(&name, &branch.branches, 2, branch.branches.len(), vars, signatures, &Register::new_gen("a", var.pure_size)?, &Register::new_gen("b", var.pure_size)?, &Register::new_gen("c", var.pure_size)?, comp_idx, file)?;
     store(vars, name, file)?;
     Ok(())
 }
 
-fn gen_pointer_asm(vars: &mut Variables, signatures: &Vec<Signature>, branch:&Branch, file:&mut File) -> Result<(), String> {
+fn gen_pointer_asm(vars: &mut Variables, signatures: &Vec<Signature>, branch:&Branch, comp_idx: &mut u64, file:&mut File) -> Result<(), String> {
     vars.push_branch(&branch)?;
     let name = vars.get_name_from_branch(&branch);
     let var = vars.get(&name)?;
-    operate(&name, &branch.branches, 2, branch.branches.len(), vars, signatures, &Register::new_gen("a", var.pure_size)?, &Register::new_gen("b", var.pure_size)?, &Register::new_gen("c", var.pure_size)?, file)?;
+    operate(&name, &branch.branches, 2, branch.branches.len(), vars, signatures, &Register::new_gen("a", var.pure_size)?, &Register::new_gen("b", var.pure_size)?, &Register::new_gen("c", var.pure_size)?, comp_idx, file)?;
     store(vars, name, file)?;
     Ok(())
 }
 
-pub fn assignate_var(name:&str, vars: &mut Variables, signatures: &Vec<Signature>, branch:&Branch, file: &mut File) -> Result<(), String> {
+pub fn assignate_var(name:&str, vars: &mut Variables, signatures: &Vec<Signature>, branch:&Branch, comp_idx: &mut u64, file: &mut File) -> Result<(), String> {
     let var = vars.get(name)?;
-    operate(name, &branch.branches, 0, branch.branches.len(), vars, signatures, &Register::new_gen("a", var.pure_size)?, &Register::new_gen("b", var.pure_size)?, &Register::new_gen("c", var.pure_size)?, file)?;
+    operate(name, &branch.branches, 0, branch.branches.len(), vars, signatures, &Register::new_gen("a", var.pure_size)?, &Register::new_gen("b", var.pure_size)?, &Register::new_gen("c", var.pure_size)?, comp_idx, file)?;
     store(vars, String::from(name), file)?;
     Ok(())
 }
 
-pub fn assignate_var_ptr(name:&str, vars: &mut Variables, signatures: &Vec<Signature>, branch:&Branch, file: &mut File) -> Result<(), String> {
+pub fn assignate_var_ptr(name:&str, vars: &mut Variables, signatures: &Vec<Signature>, branch:&Branch, comp_idx: &mut u64, file: &mut File) -> Result<(), String> {
     let var = vars.get(name)?;
-    operate(name, &branch.branches, 0, branch.branches.len(), vars, signatures, &Register::new_gen("a", var.pure_size)?, &Register::new_gen("b", var.pure_size)?, &Register::new_gen("c", var.pure_size)?, file)?;
+    operate(name, &branch.branches, 0, branch.branches.len(), vars, signatures, &Register::new_gen("a", var.pure_size)?, &Register::new_gen("b", var.pure_size)?, &Register::new_gen("c", var.pure_size)?, comp_idx, file)?;
     store_ptr(vars, String::from(name), file)?;
     Ok(())
 }

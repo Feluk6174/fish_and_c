@@ -9,7 +9,7 @@ use crate::precompile::{branch::Branch, tokens::TTS};
 
 pub static BUILTIN_FUNCTIONS: [&str; 3] = ["resmem", "sizeof", "reg"];
 
-pub fn builtin(name: &str, branch: &Branch, vars: &mut Variables, signatures: &Vec<Signature>, register: &Register, file: &mut File) -> Result<bool, String> {
+pub fn builtin(name: &str, branch: &Branch, vars: &mut Variables, signatures: &Vec<Signature>, register: &Register, comp_idx: &mut u64, file: &mut File) -> Result<bool, String> {
     match name {
         "resmem" => {
             resmem(vars, branch, register, file)?;
@@ -20,7 +20,7 @@ pub fn builtin(name: &str, branch: &Branch, vars: &mut Variables, signatures: &V
             Ok(true)
         },
         "reg" =>   {
-            reg(vars, signatures, branch, file)?;
+            reg(vars, signatures, branch, comp_idx, file)?;
             Ok(true)
         }
         _ => Ok(false)
@@ -65,7 +65,7 @@ fn sizeof(vars: &Variables, branch: &Branch, register: &Register, file: &mut Fil
     Ok(())
 }
 
-fn reg(vars: &mut Variables, signatures: &Vec<Signature>, branch: &Branch, file: &mut File) -> Result<(), String> {
+fn reg(vars: &mut Variables, signatures: &Vec<Signature>, branch: &Branch, comp_idx: &mut u64, file: &mut File) -> Result<(), String> {
     if branch.branches[0].branches[0].token.token_type != TTS::StringLiteral {
         return Err("Expected string literal as first argument for reg".to_string())
     }
@@ -76,6 +76,6 @@ fn reg(vars: &mut Variables, signatures: &Vec<Signature>, branch: &Branch, file:
         Ok(val) => val,
         Err(_) => return Err(format!("Expected a number got {}", branch.branches[1].branches[0].token.text))
     };
-    operate("None", &branch.branches[2].branches, 0, 1, vars, signatures, &Register::new(&branch.branches[0].branches[0].token.text, "a", size), &Register::new_gen("13", size)?, &Register::new_gen("14", size)?, file)?;
+    operate("None", &branch.branches[2].branches, 0, branch.branches[2].branches.len(), vars, signatures, &Register::new(&branch.branches[0].branches[0].token.text, "a", size), &Register::new_gen("13", size)?, &Register::new_gen("14", size)?, comp_idx, file)?;
     Ok(())
 }

@@ -13,7 +13,7 @@ pub fn compile(tree: Vec<Branch>, file_name: &str) -> Result<(), String> {
 
 fn add_base(file:&mut File, mem_size:u64, p_buf_size:u64) {
     file.write_all(format!("; Coded in Fish&C
-; https://github.com/Feluk6174/yeso-compiler
+; https://github.com/Feluk6174/fish_and_c
 global _start
 
 section .data

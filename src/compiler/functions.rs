@@ -38,6 +38,7 @@ pub struct Function {
     pub vars: Variables,
     pub ifs: (Vec<u64>, u64),
     pub loops: (Vec<u64>, u64),
+    pub comp_idx: u64,
 }
 
 impl Function {
@@ -68,7 +69,8 @@ impl Function {
             args: args,
             vars: vars,
             ifs: (Vec::new(), 0),
-            loops: (Vec::new(), 0)
+            loops: (Vec::new(), 0),
+            comp_idx: 0,
         })
     }
 
@@ -92,12 +94,12 @@ impl Function {
         for branch in &branch.branches {
             match branch.token.token_type {
                 TTS::Pointer | TTS::VarType => {
-                    gen_declare_asm(&mut self.vars, signatures, branch, file)?
+                    gen_declare_asm(&mut self.vars, signatures, branch, &mut self.comp_idx, file)?
                 }
                 TTS::Name => if is_function(signatures, &branch.token.text) {
-                    function_call(&branch.token.text, signatures, &mut self.vars, file, branch)?;
+                    function_call(&branch.token.text, signatures, &mut self.vars, &mut self.comp_idx, file, branch)?;
                 } else if is_variable(&self.vars, &branch.token.text) {
-                    assignate_var(&branch.token.text, &mut self.vars, signatures, branch, file)?
+                    assignate_var(&branch.token.text, &mut self.vars, signatures, branch, &mut self.comp_idx, file)?
                 } else {
                     return Err(format!("Undeclared name {}!", branch.token.text))
                 },
@@ -181,8 +183,8 @@ fn get_sign<'a>(name: &str, signatures: &'a Vec<Signature>) -> Result<&'a Signat
     Err(format!("Function {} not found", name))
 }
 
-pub fn function_call(name:&str, signatures: &Vec<Signature>, vars: &mut Variables, file: &mut File, branch: &Branch) -> Result<Register, String> {
-    if builtin(name, branch, vars, signatures, &Register::new_gen("8", 8)?, file)? {
+pub fn function_call(name:&str, signatures: &Vec<Signature>, vars: &mut Variables, comp_idx: &mut u64, file: &mut File, branch: &Branch) -> Result<Register, String> {
+    if builtin(name, branch, vars, signatures, &Register::new_gen("8", 8)?, comp_idx, file)? {
         return Ok(Register::new_gen("8", 8)?)
     }
     let signature = get_sign(name, signatures)?;
@@ -190,7 +192,7 @@ pub fn function_call(name:&str, signatures: &Vec<Signature>, vars: &mut Variable
     for (t, arg) in zip(&signature.args,&branch.branches) {
         let reg = Register::new_gen("8", t.pure_size()?)?;
 
-        operate("None", &arg.branches, 0, 1, vars, signatures, &reg, &Register::new_gen("c", t.pure_size()?)?, &Register::new_gen("d", t.pure_size()?)?, file)?;
+        operate("None", &arg.branches, 0, arg.branches.len(), vars, signatures, &reg, &Register::new_gen("c", t.pure_size()?)?, &Register::new_gen("d", t.pure_size()?)?, comp_idx, file)?;
         file.write_all(format!("lea rsi, [r15+{}]
 mov {}[rsi], {}\n", rel_pos, reg.prefix(), reg.name).as_bytes()).expect("Failed to write to file");
         rel_pos += t.pure_size()?;
