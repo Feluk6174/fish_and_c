@@ -5,7 +5,7 @@ use super::{
 };
 use crate::types::{
     literals::{load_number_literal, load_register_result},
-    unsigned::{add, div, load_pointer_op, load_unsigned, mul, sub},
+    unsigned::{add, div, load_pointer_op, load_unsigned, mul, sub, equals, nequals, grater, lesser, gratere, lessere},
 };
 use crate::{
     precompile::{
@@ -38,7 +38,6 @@ fn get_priority(token: &Token) -> Result<u8, String> {
 
 fn load_branch(
     num: &Branch,
-    store_reg: &Register,
     assist_reg: &Register,
     vars: &Variables,
     functions: &Vec<Signature>,
@@ -65,12 +64,13 @@ fn gen_op_asm(
     assist_reg_2: &Register,
     vars: &Variables,
     functions: &Vec<Signature>,
+    mut comp_idx: u64,
     file: &mut File,
-) -> Result<(), String> {
+) -> Result<u64, String> {
     file.write_all(format!(";{}\n", operation.text).as_bytes())
         .unwrap();
-    load_branch(num1, store_reg, assist_reg_1, vars, functions, file)?;
-    load_branch(num2, store_reg, assist_reg_2, vars, functions, file)?;
+    load_branch(num1, assist_reg_1, vars, functions, file)?;
+    load_branch(num2, assist_reg_2, vars, functions, file)?;
 
     match operation.text.as_str() {
         "+" => add(store_reg, assist_reg_1, assist_reg_2, file),
@@ -78,14 +78,18 @@ fn gen_op_asm(
         "*" => mul(store_reg, assist_reg_1, assist_reg_2, file),
         "/" => div(store_reg, assist_reg_1, assist_reg_2, file),
         "%" => (),
-        "==" => (),
-        "<" => (),
-        ">" => (),
-        ">=" => (),
-        "<=" => (),
+        "==" => equals(store_reg, assist_reg_1, assist_reg_2, comp_idx, file),
+        "<" => lesser(store_reg, assist_reg_1, assist_reg_2, comp_idx, file),
+        ">" => grater(store_reg, assist_reg_1, assist_reg_2, comp_idx, file),
+        ">=" => gratere(store_reg, assist_reg_1, assist_reg_2, comp_idx, file),
+        "<=" => lessere(store_reg, assist_reg_1, assist_reg_2, comp_idx, file),
+        "!=" => nequals(store_reg, assist_reg_1, assist_reg_2, comp_idx, file),
         _ => return Err(format!("{} unrecognised operation", operation.text)),
     }
-    Ok(())
+    if operation.token_type == TTS::Comparison {
+        comp_idx = comp_idx + 1;
+    }
+    Ok(comp_idx)
 }
 
 fn real_op(
@@ -98,8 +102,9 @@ fn real_op(
     store_reg: &Register,
     assist_reg_1: &Register,
     assist_reg_2: &Register,
+    mut comp_idx: u64,
     file: &mut File,
-) -> Result<(), String> {
+) -> Result<u64, String> {
     loop {
         if operation_stack.len() == 0 {
             break;
@@ -108,7 +113,7 @@ fn real_op(
             let num2 = data_stack.pop().unwrap();
             let num1 = data_stack.pop().unwrap();
             let op = &operation_stack.pop().unwrap().token;
-            gen_op_asm(
+            comp_idx = gen_op_asm(
                 op,
                 &num1,
                 &num2,
@@ -117,6 +122,7 @@ fn real_op(
                 &assist_reg_2,
                 vars,
                 signatures,
+                comp_idx,
                 file,
             )?;
             data_stack.push(store_branch.clone());
@@ -124,7 +130,7 @@ fn real_op(
             break;
         }
     }
-    Ok(())
+    Ok(comp_idx)
 }
 
 pub fn operate<'a>(
@@ -137,17 +143,17 @@ pub fn operate<'a>(
     store_reg: &Register,
     assist_reg_1: &Register,
     assist_reg_2: &Register,
+    comp_idx: &mut u64,
     file: &mut File,
 ) -> Result<(), String> {
     let mut operation_stack: Vec<Branch> = Vec::new();
     let mut data_stack: Vec<Branch> = Vec::new();
     let store_branch = Branch::new(Token::register_result(&store_reg.name));
     let temp_branch = Branch::new(Token::name(name));
-    let mut function_results: Vec<Box<Branch>> = Vec::new();
 
     for i in min..max {
         if is_operation(&args[i].token) {
-            real_op(
+            *comp_idx = real_op(
                 &args[i].token,
                 &mut operation_stack,
                 &mut data_stack,
@@ -157,6 +163,7 @@ pub fn operate<'a>(
                 &store_reg,
                 &assist_reg_1,
                 &assist_reg_2,
+                *comp_idx,
                 file,
             )?;
             operation_stack.push(args[i].clone())
@@ -178,6 +185,7 @@ pub fn operate<'a>(
                 &store_reg,
                 &assist_reg_1,
                 &assist_reg_2,
+                comp_idx,
                 file,
             )?;
 
@@ -190,9 +198,8 @@ pub fn operate<'a>(
                     data_stack.push(temp_branch.clone());
                 }
             }
-            load_pointer_op(name, vars, signatures, &args[i], store_reg, assist_reg_1, assist_reg_2, file)?;
+            load_pointer_op(name, vars, signatures, &args[i], store_reg, assist_reg_1, assist_reg_2, comp_idx, file)?;
         } else if args[i].token.token_type == TTS::Name && is_function(signatures, &args[i].token.text) {
-            println!("{} {}", &args[i].token.text, is_function(signatures, &args[i].token.text));
             if data_stack.len() > 0 {
                 if data_stack[data_stack.len() - 1].token.token_type == TTS::RegisterResult {
                     store_reg_to_mem(vars, String::from(name), store_reg, file)?;
@@ -200,7 +207,7 @@ pub fn operate<'a>(
                     data_stack.push(temp_branch.clone());
                 }
             }
-            let reg = function_call(&args[i].token.text, signatures, vars, file, &args[i])?;
+            let reg = function_call(&args[i].token.text, signatures, vars, comp_idx, file, &args[i])?;
             data_stack.push(Branch::new(Token::register_result(&reg.name)));
         } else {
             data_stack.push(args[i].clone())
@@ -208,7 +215,7 @@ pub fn operate<'a>(
     }
 
     if data_stack.len() != 1 {
-        real_op(
+        *comp_idx = real_op(
             &Token::arithmetic_operation("end"),
             &mut operation_stack,
             &mut data_stack,
@@ -218,12 +225,12 @@ pub fn operate<'a>(
             &store_reg,
             &assist_reg_1,
             &assist_reg_2,
+            *comp_idx,
             file,
         )?;
     } else {
         load_branch(
             &data_stack[0],
-            &assist_reg_1,
             &store_reg,
             vars,
             signatures,

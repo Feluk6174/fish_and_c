@@ -26,14 +26,7 @@ fn run(exec_name: &str) {
 }
 
 fn version() {
-    println!("Version 1.0.0");
-}
-
-fn print_compile_error(error: u8) {
-    println!("{}", match error {
-        2 => "Error loading file bf file",
-        _ => "Error while compiling"
-    });
+    println!("Version 0.0.1");
 }
 
 fn help() {
@@ -58,6 +51,10 @@ pub fn cmd() {
     let mut o_file = "fish.o";
     let mut asm_file = "fish.asm";
     let args: Vec<String> = env::args().collect();
+    if args.len() == 1 {
+        println!("Expected a file!");
+        return
+    }
     for (i, arg) in args.iter().enumerate() {
         if arg == "-o" || arg == "--output" {
             exec_file = &args[i+1];

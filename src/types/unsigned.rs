@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::Write;
 
 use crate::compiler::{functions::{is_function, Signature}, register::Register, variables::{is_variable, Variable, Variables}, operation::operate};
-use crate::precompile::{branch::Branch, tokens::TTS};
+use crate::precompile::branch::Branch;
 
 
 pub fn load_unsigned(dest_reg: &Register, var: &Branch, vars: &Variables, signatures: &Vec<Signature>, file: &mut File) -> Result<(), String>{
@@ -59,6 +59,72 @@ mov {}, {}
 
 pub fn modul() {}
 
+pub fn equals(dest_reg: &Register, op_reg_1: &Register, op_reg_2: &Register, comp_idx: u64, file: &mut File) {
+    file.write_all(format!("cmp {}, {}
+je comp{}
+mov {}, 0
+jmp ncomp{}
+comp{}:
+mov {}, 1
+ncomp{}:
+", op_reg_1.name, op_reg_2.name, comp_idx, dest_reg.name, comp_idx, comp_idx, dest_reg.name, comp_idx).as_bytes()).expect("Error writing to file");
+}
+
+pub fn nequals(dest_reg: &Register, op_reg_1: &Register, op_reg_2: &Register, comp_idx: u64, file: &mut File) {
+    file.write_all(format!("cmp {}, {}
+jne comp{}
+mov {}, 0
+jmp ncomp{}
+comp{}:
+mov {}, 1
+ncomp{}:
+", op_reg_1.name, op_reg_2.name, comp_idx, dest_reg.name, comp_idx, comp_idx, dest_reg.name, comp_idx).as_bytes()).expect("Error writing to file");
+}
+
+pub fn grater(dest_reg: &Register, op_reg_1: &Register, op_reg_2: &Register, comp_idx: u64, file: &mut File) {
+    file.write_all(format!("cmp {}, {}
+jg comp{}
+mov {}, 0
+jmp ncomp{}
+comp{}:
+mov {}, 1
+ncomp{}:
+", op_reg_1.name, op_reg_2.name, comp_idx, dest_reg.name, comp_idx, comp_idx, dest_reg.name, comp_idx).as_bytes()).expect("Error writing to file");
+}
+
+pub fn lesser(dest_reg: &Register, op_reg_1: &Register, op_reg_2: &Register, comp_idx: u64, file: &mut File) {
+    file.write_all(format!("cmp {}, {}
+jl comp{}
+mov {}, 0
+jmp ncomp{}
+comp{}:
+mov {}, 1
+ncomp{}:
+", op_reg_1.name, op_reg_2.name, comp_idx, dest_reg.name, comp_idx, comp_idx, dest_reg.name, comp_idx).as_bytes()).expect("Error writing to file");
+}
+
+pub fn gratere(dest_reg: &Register, op_reg_1: &Register, op_reg_2: &Register, comp_idx: u64, file: &mut File) {
+    file.write_all(format!("cmp {}, {}
+jge comp{}
+mov {}, 0
+jmp ncomp{}
+comp{}:
+mov {}, 1
+ncomp{}:
+", op_reg_1.name, op_reg_2.name, comp_idx, dest_reg.name, comp_idx, comp_idx, dest_reg.name, comp_idx).as_bytes()).expect("Error writing to file");
+}
+
+pub fn lessere(dest_reg: &Register, op_reg_1: &Register, op_reg_2: &Register, comp_idx: u64, file: &mut File) {
+    file.write_all(format!("cmp {}, {}
+jle comp{}
+mov {}, 0
+jmp ncomp{}
+comp{}:
+mov {}, 1
+ncomp{}:
+", op_reg_1.name, op_reg_2.name, comp_idx, dest_reg.name, comp_idx, comp_idx, dest_reg.name, comp_idx).as_bytes()).expect("Error writing to file");
+}
+
 
 pub fn load_pointer_name(vars: &Variables, branch: &Branch, register: &Register, file: &mut File) -> Result<(), String> {
     if !is_variable(vars, &branch.branches[0].token.text) {
@@ -74,8 +140,10 @@ mov {}, [rsi]
     Ok(())
 }
 
-pub fn load_pointer_op(name:&str, vars: &mut Variables, signatures: &Vec<Signature>, branch: &Branch, store_reg: &Register, assist_reg_1: &Register, assist_reg_2: &Register, file: &mut File) -> Result<(), String> {
-    operate(name, &branch.branches[0].branches, 0, branch.branches[0].branches.len(), vars, signatures, &Register::new_gen("si", 8)?, &assist_reg_1.get_in_size(8)?, &assist_reg_2.get_in_size(8)?, file)?;
+
+
+pub fn load_pointer_op(name:&str, vars: &mut Variables, signatures: &Vec<Signature>, branch: &Branch, store_reg: &Register, assist_reg_1: &Register, assist_reg_2: &Register, comp_idx: &mut u64, file: &mut File) -> Result<(), String> {
+    operate(name, &branch.branches[0].branches, 0, branch.branches[0].branches.len(), vars, signatures, &Register::new_gen("si", 8)?, &assist_reg_1.get_in_size(8)?, &assist_reg_2.get_in_size(8)?, comp_idx, file)?;
     
     file.write_all(format!("mov {}, {}[rsi]
 ", store_reg.name, store_reg.prefix()).as_bytes()).expect("Error writing to file");

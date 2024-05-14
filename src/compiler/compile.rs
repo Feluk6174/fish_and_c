@@ -1,11 +1,10 @@
 use std::{fs::File, io::Write};
 use crate::precompile::branch::Branch;
-use super::functions::{Function, build_functions, process_functions};
+use super::functions::{build_functions, process_functions};
 
 pub fn compile(tree: Vec<Branch>, file_name: &str) -> Result<(), String> {
-    let (mut functions, signatures) = build_functions(&tree)?;
+    let (functions, signatures) = build_functions(&tree)?;
     let mut file = File::create(file_name).expect("Error writing to file");
-    println!("{}", functions.len());
     add_base(&mut file, 10000, 100);
     process_functions(functions, signatures,&mut file)?;
     Ok(())
@@ -14,7 +13,7 @@ pub fn compile(tree: Vec<Branch>, file_name: &str) -> Result<(), String> {
 
 fn add_base(file:&mut File, mem_size:u64, p_buf_size:u64) {
     file.write_all(format!("; Coded in Fish&C
-; https://github.com/Feluk6174/yeso-compiler
+; https://github.com/Feluk6174/fish_and_c
 global _start
 
 section .data
