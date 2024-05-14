@@ -25,3 +25,13 @@ je done{}\n", function.loops.1).as_bytes()).expect("Failed to write to file");
     file.write_all(format!("jmp do{}\ndone{}:\n", tnum, tnum).as_bytes()).expect("Failed to write to file");
     Ok(())
 }
+
+pub fn gen_break_asm(loops: &(Vec<u64>, u64), file: &mut File) -> Result<(), String> {
+    file.write_all(format!("jmp done{}\n", loops.0[loops.0.len()-1]).as_bytes()).expect("Failed to write to file");
+    Ok(())
+}
+
+pub fn gen_continue_asm(loops: &(Vec<u64>, u64), file: &mut File) -> Result<(), String> {
+    file.write_all(format!("jmp do{}\n", loops.0[loops.0.len()-1]).as_bytes()).expect("Failed to write to file");
+    Ok(())
+}

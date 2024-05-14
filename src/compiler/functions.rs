@@ -1,6 +1,6 @@
 use super::assembly::gen_asm_asm;
 use super::comparison::gen_if_asm;
-use super::loops::gen_while_asm;
+use super::loops::{gen_break_asm, gen_continue_asm, gen_while_asm};
 use super::operation::operate;
 use super::register::Register;
 use super::variables::{assignate_var, is_variable, Size, Type, Variables};
@@ -110,8 +110,8 @@ impl Function {
                     gen_while_asm(branch, signatures, self, file)?
                 }
                 TTS::ReturnKeyword => function_return(self.return_type.pure_size()?, &branch, &mut self.vars, signatures, &mut self.comp_idx, file)?,
-                TTS::BreakKeyword => return Err(String::from("BReak still not implemented, cooming soon")),
-                TTS::ContinueKeyword => return Err(String::from("Continue still not implemented, cooming soon")),
+                TTS::BreakKeyword => gen_break_asm(&self.loops, file)?,
+                TTS::ContinueKeyword => gen_continue_asm(&self.loops, file)?,
                 TTS::Assembly => gen_asm_asm(&branch, file)?,
                 _ => return Err(format!("Invalid token {}", branch.token.text)),
             };
@@ -220,5 +220,6 @@ pop r15
 
 fn function_return(return_size: u64, branch: &Branch, vars: &mut Variables, signatures: &Vec<Signature>, comp_idx: &mut u64, file: &mut File) -> Result<(), String>{
     operate("None", &branch.branches, 0, branch.branches.len(), vars, signatures, &Register::new_gen("8", return_size)?, &Register::new_gen("9", return_size)?, &Register::new_gen("10", return_size)?, comp_idx, file)?;
+    file.write_all("ret\n".as_bytes()).expect("Failed to write to file");
     Ok(())
 }
