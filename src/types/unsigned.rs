@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::Write;
 
 use crate::compiler::{functions::{is_function, Signature}, register::Register, variables::{is_variable, Variable, Variables}, operation::operate};
-use crate::precompile::{branch::Branch, tokens::TTS};
+use crate::precompile::branch::Branch;
 
 
 pub fn load_unsigned(dest_reg: &Register, var: &Branch, vars: &Variables, signatures: &Vec<Signature>, file: &mut File) -> Result<(), String>{

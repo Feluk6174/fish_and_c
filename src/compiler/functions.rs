@@ -29,7 +29,7 @@ impl Signature {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Function {
     pub name: String,
     pub return_type: Type,
@@ -109,7 +109,7 @@ impl Function {
                 TTS::WhileKeyword => {
                     gen_while_asm(branch, signatures, self, file)?
                 }
-                TTS::ReturnKeyword => return Err(String::from("Return still not implemented, cooming soon")),
+                TTS::ReturnKeyword => function_return(self.return_type.pure_size()?, &branch, &mut self.vars, signatures, &mut self.comp_idx, file)?,
                 TTS::BreakKeyword => return Err(String::from("BReak still not implemented, cooming soon")),
                 TTS::ContinueKeyword => return Err(String::from("Continue still not implemented, cooming soon")),
                 TTS::Assembly => gen_asm_asm(&branch, file)?,
@@ -135,6 +135,13 @@ impl Function {
         )
         .expect("Failed tor write to file!")
     }
+
+    pub fn apply_nums(&mut self, function: Function) {
+        self.ifs = function.ifs;
+        self.loops = function.loops;
+        self.comp_idx = function.comp_idx;
+
+    }
 }
 
 pub fn process_functions(
@@ -144,6 +151,10 @@ pub fn process_functions(
 ) -> Result<(), String> {
     for i in 0..functions.len() {
         functions[i].process(file, &signatures)?;
+        if i != functions.len() - 1 {
+            let temp = functions[i].clone();
+            functions[i+1].apply_nums(temp);
+        }
     }
     Ok(())
 }
@@ -205,4 +216,9 @@ pop r15
 ", vars.rel_pos, name).as_bytes()).expect("Failed to write to file");
 
     Ok(Register::new_gen("8", signature.return_type.pure_size()?)?)
+}
+
+fn function_return(return_size: u64, branch: &Branch, vars: &mut Variables, signatures: &Vec<Signature>, comp_idx: &mut u64, file: &mut File) -> Result<(), String>{
+    operate("None", &branch.branches, 0, branch.branches.len(), vars, signatures, &Register::new_gen("8", return_size)?, &Register::new_gen("9", return_size)?, &Register::new_gen("10", return_size)?, comp_idx, file)?;
+    Ok(())
 }
