@@ -174,16 +174,6 @@ impl Variable {
             rel_pos: rel_pos
         })  
     }
-    pub fn new_simple(name: &str, var_type: &str, rel_pos:u64) -> Result<Self, String> {
-        let t = Type::Simple(SimpleType::new(var_type)?);
-        Ok(Self {
-            name: String::from(name),
-            var_type: t,
-            size: t.size()?,
-            pure_size: t.pure_size()?,
-            rel_pos: rel_pos
-        })
-    }
 }
 
 #[derive(Debug, Default, Clone)]

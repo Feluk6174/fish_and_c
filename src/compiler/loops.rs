@@ -1,6 +1,6 @@
 use std::{fs::File, io::Write};
 
-use crate::precompile::{branch::Branch, tokens::TTS};
+use crate::precompile::branch::Branch;
 
 use super::{functions::{Function, Signature}, operation::operate, register::Register};
 

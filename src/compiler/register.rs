@@ -61,7 +61,7 @@ impl Register {
             _ => String::from("WTF")
         }
     }
-    pub fn get_in_size_adapted(&self, size:u64, file: &mut File) -> Result<Register, String> {
+    pub fn _get_in_size_adapted(&self, size:u64, file: &mut File) -> Result<Register, String> {
         let reg = self.get_in_size(size)?;
         file.write_all(format!("and {}, {}n", reg.name, 2_u64.pow(size as u32)-1).as_bytes()).expect("Failed to write to file");
         Ok(reg)

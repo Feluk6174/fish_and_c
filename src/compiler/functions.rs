@@ -7,7 +7,7 @@ use super::variables::{assignate_var, is_variable, Size, Type, Variables};
 use crate::compiler::variables::gen_declare_asm;
 use crate::precompile::branch::{get_name_from_arg, Branch};
 use crate::precompile::tokens::TTS;
-use crate::runtime::functions::{builtin, builtin_functions};
+use crate::runtime::functions::{builtin, BUILTIN_FUNCTIONS};
 use std::fs::File;
 use std::io::Write;
 use std::iter::zip;
@@ -75,7 +75,7 @@ impl Function {
     pub fn process(
         &mut self,
         file: &mut File,
-        mut signatures: &Vec<Signature>,
+        signatures: &Vec<Signature>,
     ) -> Result<(), String> {
         self.add_start(file);
         self.process_custom(file, signatures,&self.code.clone())?;
@@ -86,7 +86,7 @@ impl Function {
     pub fn process_custom(
         &mut self,
         file: &mut File,
-        mut signatures: &Vec<Signature>,
+        signatures: &Vec<Signature>,
         branch: &Branch
     ) -> Result<(), String> {
         for branch in &branch.branches {
@@ -163,7 +163,7 @@ pub fn is_function(signatures: &Vec<Signature>, name: &str) -> bool {
         }
     }
 
-    for fname in builtin_functions {
+    for fname in BUILTIN_FUNCTIONS {
         if fname == name {
             return true
         }

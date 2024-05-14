@@ -7,7 +7,7 @@ use crate::compiler::register::Register;
 use crate::compiler::variables::{Variables, Size, Type};
 use crate::precompile::{branch::Branch, tokens::TTS};
 
-pub static builtin_functions: [&str; 3] = ["resmem", "sizeof", "reg"];
+pub static BUILTIN_FUNCTIONS: [&str; 3] = ["resmem", "sizeof", "reg"];
 
 pub fn builtin(name: &str, branch: &Branch, vars: &mut Variables, signatures: &Vec<Signature>, register: &Register, file: &mut File) -> Result<bool, String> {
     match name {
@@ -20,7 +20,7 @@ pub fn builtin(name: &str, branch: &Branch, vars: &mut Variables, signatures: &V
             Ok(true)
         },
         "reg" =>   {
-            reg(vars, signatures, branch, register, file)?;
+            reg(vars, signatures, branch, file)?;
             Ok(true)
         }
         _ => Ok(false)
@@ -45,7 +45,7 @@ fn resmem(vars: &mut Variables, branch: &Branch, register: &Register, file: &mut
 
 fn sizeof(vars: &Variables, branch: &Branch, register: &Register, file: &mut File) -> Result<(), String> {
     let branch = &branch.branches[0].branches[0];
-    let mut size: u64 = 0;
+    let size: u64;
     match branch.token.token_type {
         TTS::VarType => {
             size = Type::new(branch)?.pure_size()?;
@@ -65,7 +65,7 @@ fn sizeof(vars: &Variables, branch: &Branch, register: &Register, file: &mut Fil
     Ok(())
 }
 
-fn reg(vars: &mut Variables, signatures: &Vec<Signature>, branch: &Branch, register: &Register, file: &mut File) -> Result<(), String> {
+fn reg(vars: &mut Variables, signatures: &Vec<Signature>, branch: &Branch, file: &mut File) -> Result<(), String> {
     if branch.branches[0].branches[0].token.token_type != TTS::StringLiteral {
         return Err("Expected string literal as first argument for reg".to_string())
     }
@@ -76,6 +76,6 @@ fn reg(vars: &mut Variables, signatures: &Vec<Signature>, branch: &Branch, regis
         Ok(val) => val,
         Err(_) => return Err(format!("Expected a number got {}", branch.branches[1].branches[0].token.text))
     };
-    operate("None", &branch.branches[2].branches, 0, 1, vars, signatures, &Register::new(&branch.branches[0].branches[0].token.text, "a", size), &Register::new_gen("13", size)?, &Register::new_gen("14", size)?, file);
+    operate("None", &branch.branches[2].branches, 0, 1, vars, signatures, &Register::new(&branch.branches[0].branches[0].token.text, "a", size), &Register::new_gen("13", size)?, &Register::new_gen("14", size)?, file)?;
     Ok(())
 }

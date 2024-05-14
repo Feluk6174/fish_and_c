@@ -2,8 +2,6 @@ use std::fs::File;
 use std::io::Write;
 use crate::compiler::register::Register;
 use crate::compiler::variables::{PointerType, Type, Variable, Variables};
-use crate::precompile::branch::Branch;
-use crate::precompile::tokens::TTS;
 
 pub fn load_number_literal(value: &str, register: &Register, file:&mut File) {
     file.write_all(format!("mov {}, {}\n", register.name, value).as_bytes()).expect("Error writing to file");

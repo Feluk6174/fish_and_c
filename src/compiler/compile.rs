@@ -1,9 +1,9 @@
 use std::{fs::File, io::Write};
 use crate::precompile::branch::Branch;
-use super::functions::{Function, build_functions, process_functions};
+use super::functions::{build_functions, process_functions};
 
 pub fn compile(tree: Vec<Branch>, file_name: &str) -> Result<(), String> {
-    let (mut functions, signatures) = build_functions(&tree)?;
+    let (functions, signatures) = build_functions(&tree)?;
     let mut file = File::create(file_name).expect("Error writing to file");
     add_base(&mut file, 10000, 100);
     process_functions(functions, signatures,&mut file)?;

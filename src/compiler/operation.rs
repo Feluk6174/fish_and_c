@@ -38,7 +38,6 @@ fn get_priority(token: &Token) -> Result<u8, String> {
 
 fn load_branch(
     num: &Branch,
-    store_reg: &Register,
     assist_reg: &Register,
     vars: &Variables,
     functions: &Vec<Signature>,
@@ -69,8 +68,8 @@ fn gen_op_asm(
 ) -> Result<(), String> {
     file.write_all(format!(";{}\n", operation.text).as_bytes())
         .unwrap();
-    load_branch(num1, store_reg, assist_reg_1, vars, functions, file)?;
-    load_branch(num2, store_reg, assist_reg_2, vars, functions, file)?;
+    load_branch(num1, assist_reg_1, vars, functions, file)?;
+    load_branch(num2, assist_reg_2, vars, functions, file)?;
 
     match operation.text.as_str() {
         "+" => add(store_reg, assist_reg_1, assist_reg_2, file),
@@ -143,7 +142,6 @@ pub fn operate<'a>(
     let mut data_stack: Vec<Branch> = Vec::new();
     let store_branch = Branch::new(Token::register_result(&store_reg.name));
     let temp_branch = Branch::new(Token::name(name));
-    let mut function_results: Vec<Box<Branch>> = Vec::new();
 
     for i in min..max {
         if is_operation(&args[i].token) {
@@ -222,7 +220,6 @@ pub fn operate<'a>(
     } else {
         load_branch(
             &data_stack[0],
-            &assist_reg_1,
             &store_reg,
             vars,
             signatures,
